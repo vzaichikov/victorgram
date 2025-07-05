@@ -40,6 +40,10 @@ def handle_message(client: Client, message: Message):
         print(f"Skipping group/channel: {user_id}")
         return
 
+    if message.chat.id < 0:
+        print(f"Skipping group/channel: {message.chat.id}")
+        return
+
     try:
         # Get last 51 messages to exclude the current incoming one (the 51st is the new one)
         history = list(client.get_chat_history(user_id, limit=51))
