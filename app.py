@@ -29,6 +29,11 @@ def build_openai_messages(history, new_message):
 def handle_message(client: Client, message: Message):
     user_id = message.from_user.id
 
+    username = message.from_user.username
+    if username and username.lower().endswith("_bot"):
+        print(f"Skipping bot user: {username}")
+        return
+
     # Exclude groups/channels by checking chat.id
     if user_id < 0:
         print(f"Skipping group/channel: {user_id}")
