@@ -64,6 +64,8 @@ def handle_message(client: Client, message: Message):
         message.reply_text(reply)
     except ValueError as e:
         print(f"❌ Error for chat {message.chat.id}: {e}")
+    except KeyError as e:
+        print(f"❌ Error for chat {message.chat.id}: {e}")
     except Exception as e:
         print(f"❌ Unexpected error for chat {message.chat.id}: {e}")
 
