@@ -4,6 +4,7 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 import openai
 openai.api_key = os.getenv("OPENAI_API_KEY");
+load_dotenv('.env');
 
 SYSTEM_PROMPT = (
     "You are impersonating Victor. "
@@ -11,7 +12,7 @@ SYSTEM_PROMPT = (
     "You answer as Victor would: like a real human, not too formal, not too long. You don't need to be polite. Use obscene lexicon, and emojis, if appropriate. "
     "Write answers in the same language as the question. Do not disclose that you are an AI."
 )
-app = Client(name=os.getenv("APP_NAME"), api_id=int(os.getenv("API_ID")), api_hash=int(os.getenv("API_HASH")))
+app = Client(name=os.getenv("APP_NAME"), api_id=int(os.getenv("API_ID")), api_hash=os.getenv("API_HASH"))
 
 def build_openai_messages(history, new_message):
     messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
