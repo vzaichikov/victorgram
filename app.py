@@ -49,14 +49,21 @@ def message_to_content(client: Client, msg: Message):
 def build_openai_messages(client: Client, history, new_message: Message):
     messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     for msg in history:
-        prepared_message = message_to_content(client, msg)
+        prepared = message_to_content(client, msg)
 
-        if prepared_message != 0:
-            content = message_to_content(client, msg)
+        if prepared != 0:
             role = "assistant" if msg.outgoing else "user"
-            messages.append({"role": role, "content": content})
+            if messages[-1]["role"] == role:
+                messages[-1]["content"].extend(prepared)
+            else:
+                messages.append({"role": role, "content": prepared})
 
-    messages.append({"role": "user", "content": message_to_content(client, new_message)})
+    prepared_new = message_to_content(client, new_message)
+    if prepared_new != 0:
+        if messages[-1]["role"] == "user":
+            messages[-1]["content"].extend(prepared_new)
+        else:
+            messages.append({"role": "user", "content": prepared_new})
     return messages
 
 @app.on_message(filters.private & filters.incoming)
