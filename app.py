@@ -76,11 +76,11 @@ def keep_last_image_only(messages):
     return messages
 
 
-def build_openai_messages(client: Client, history, new_message: Message, system_prompt: str):
+def build_openai_messages(client: Client, history, new_messages, system_prompt: str):
     messages = [{"role": "system", "content": [{"type": "text", "text": system_prompt}]}]
+
     for msg in history:
         prepared = message_to_content(client, msg)
-
         if prepared != 0:
             role = "assistant" if msg.outgoing else "user"
             if messages[-1]["role"] == role:
@@ -88,12 +88,21 @@ def build_openai_messages(client: Client, history, new_message: Message, system_
             else:
                 messages.append({"role": role, "content": prepared})
 
-    prepared_new = message_to_content(client, new_message)
-    if prepared_new != 0:
+    if not isinstance(new_messages, list):
+        new_messages = [new_messages]
+
+    combined_new = []
+    for msg in new_messages:
+        prepared = message_to_content(client, msg)
+        if prepared != 0:
+            combined_new.extend(prepared)
+
+    if combined_new:
         if messages[-1]["role"] == "user":
-            messages[-1]["content"].extend(prepared_new)
+            messages[-1]["content"].extend(combined_new)
         else:
-            messages.append({"role": "user", "content": prepared_new})
+            messages.append({"role": "user", "content": combined_new})
+
     messages = keep_last_image_only(messages)
     return messages
 
@@ -112,15 +121,7 @@ async def process_waiting_messages(client: Client, user_id: int):
                 history = history[1:]
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
-        openai_messages = build_openai_messages(client, prev_msgs, msgs[0], system_prompt)
-        for extra in msgs[1:]:
-            prepared = message_to_content(client, extra)
-            if prepared != 0:
-                if openai_messages[-1]["role"] == "user":
-                    openai_messages[-1]["content"].extend(prepared)
-                else:
-                    openai_messages.append({"role": "user", "content": prepared})
-        openai_messages = keep_last_image_only(openai_messages)
+        openai_messages = build_openai_messages(client, prev_msgs, msgs, system_prompt)
         print("🤖 Sending message to AI api")
         reply = ai_client.complete(openai_messages)
         print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
