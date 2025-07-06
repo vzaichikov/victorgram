@@ -65,22 +65,21 @@ def handle_message(client: Client, message: Message):
         print(f"Skipping bot user: {username}")
         return
 
-    # Exclude groups/channels by checking chat.id
-    if user_id < 0:
+    if int(user_id) < 0:
         print(f"Skipping group/channel: {user_id}")
         return
 
-    if message.chat.id < 0:
+    if int(message.chat.id) < 0:
         print(f"Skipping group/channel: {message.chat.id}")
         return
 
     try:
-        # Get last 51 messages to exclude the current incoming one (the 51st is the new one)
-        history = list(client.get_chat_history(user_id, limit=51))
+        history = list(client.get_chat_history(user_id, limit=int(os.getenv("HISTORY_LIMIT"))))
         if history and history[0].id == message.id:
             history = history[1:]
 
-        prev_msgs = list(reversed(history[:50]))
+        limit = int(os.getenv("HISTORY_LIMIT")) - 1
+        prev_msgs = list(reversed(history[:limit]))
 
         openai_messages = build_openai_messages(client, prev_msgs, message)
 
