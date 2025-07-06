@@ -2,8 +2,10 @@ import os
 from dotenv import load_dotenv
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from io import BytesIO
+import base64
 import openai
-openai.api_key = os.getenv("OPENAI_API_KEY");
+openai.api_key = os.getenv("OPENAI_API_KEY")
 load_dotenv('.env');
 
 SYSTEM_PROMPT = (
@@ -14,16 +16,37 @@ SYSTEM_PROMPT = (
 )
 app = Client(name=os.getenv("APP_NAME"), api_id=int(os.getenv("API_ID")), api_hash=os.getenv("API_HASH"))
 
-def build_openai_messages(history, new_message):
+def message_to_content(client: Client, msg: Message):
+    parts = []
+    if msg.text:
+        parts.append({"type": "text", "text": msg.text})
+
+    media = None
+    mime_type = "image/jpeg"
+    if msg.photo:
+        media = client.download_media(msg, in_memory=True)
+    elif msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"):
+        media = client.download_media(msg, in_memory=True)
+        mime_type = msg.document.mime_type
+
+    if media:
+        encoded = base64.b64encode(media.getvalue()).decode()
+        parts.append({"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}})
+
+    if not parts:
+        parts.append({"type": "text", "text": "[non-text message]"})
+
+    return parts
+
+
+def build_openai_messages(client: Client, history, new_message: Message):
     messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     for msg in history:
-        if msg.text is not None:
-            if msg.outgoing:
-                messages.append({"role": "assistant", "content": [{"type": "text", "text": msg.text}]})
-            else:
-                messages.append({"role": "user", "content": [{"type": "text", "text": msg.text}]})
-    # Add the new incoming message as the latest user input
-    messages.append({"role": "user", "content": new_message})
+        content = message_to_content(client, msg)
+        role = "assistant" if msg.outgoing else "user"
+        messages.append({"role": role, "content": content})
+
+    messages.append({"role": "user", "content": message_to_content(client, new_message)})
     return messages
 
 @app.on_message(filters.private & filters.incoming)
@@ -52,7 +75,7 @@ def handle_message(client: Client, message: Message):
 
         prev_msgs = list(reversed(history[:50]))
 
-        openai_messages = build_openai_messages(prev_msgs, message.text or "[non-text message]")
+        openai_messages = build_openai_messages(client, prev_msgs, message)
 
         print(f"{openai_messages}");
 
