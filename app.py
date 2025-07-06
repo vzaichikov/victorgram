@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -83,7 +84,7 @@ def handle_message(client: Client, message: Message):
         print(f"Skipping group/channel: {message.chat.id}")
         return
 
-    print(f"🤖 Got message from {message.from_user.first_name}: {message.text or 'Non-text message'}")
+    print(f"🤖 Got message from {message.from_user.first_name} ({user_id}): {message.text or 'Non-text message'}")
 
     try:
         history = list(client.get_chat_history(user_id, limit=int(os.getenv("HISTORY_LIMIT"))))
@@ -96,6 +97,8 @@ def handle_message(client: Client, message: Message):
         openai_messages = build_openai_messages(client, prev_msgs, message)
 
         print(f"🤖 Sending message to AI api")
+        print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
+
         reply = ai_client.complete(openai_messages)
 
         print(f"🤖 Reply to {message.from_user.first_name}: {reply}")
