@@ -1,5 +1,6 @@
 import os
 import json
+import asyncio
 from dotenv import load_dotenv
 from pyrogram import Client, filters
 from pyrogram.types import Message
@@ -27,6 +28,9 @@ app = Client(
 )
 
 ai_client = AIClient()
+
+waiting_users = {}
+waiting_lock = asyncio.Lock()
 
 def message_to_content(client: Client, msg: Message):
     parts = []
@@ -93,10 +97,45 @@ def build_openai_messages(client: Client, history, new_message: Message, system_
     messages = keep_last_image_only(messages)
     return messages
 
-@app.on_message(filters.private & filters.incoming)
-def handle_message(client: Client, message: Message):
-    user_id = message.from_user.id
+async def process_waiting_messages(client: Client, user_id: int):
+    await asyncio.sleep(2)
+    async with waiting_lock:
+        msgs = waiting_users.pop(user_id, [])
+    if not msgs:
+        return
     system_prompt = get_system_prompt(user_id)
+    print(f"🤖 Processing {len(msgs)} messages from {user_id}")
+    try:
+        history = list(client.get_chat_history(user_id, limit=int(os.getenv("HISTORY_LIMIT")) + len(msgs)))
+        for m in reversed(msgs):
+            if history and history[0].id == m.id:
+                history = history[1:]
+        limit = int(os.getenv("HISTORY_LIMIT")) - 1
+        prev_msgs = list(reversed(history[:limit]))
+        openai_messages = build_openai_messages(client, prev_msgs, msgs[0], system_prompt)
+        for extra in msgs[1:]:
+            prepared = message_to_content(client, extra)
+            if prepared != 0:
+                if openai_messages[-1]["role"] == "user":
+                    openai_messages[-1]["content"].extend(prepared)
+                else:
+                    openai_messages.append({"role": "user", "content": prepared})
+        openai_messages = keep_last_image_only(openai_messages)
+        print("🤖 Sending message to AI api")
+        reply = ai_client.complete(openai_messages)
+        print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
+        msgs[-1].reply_text(reply)
+    except ValueError as e:
+        print(f"❌ Error for chat {user_id}: {e}")
+    except KeyError as e:
+        print(f"❌ Error for chat {user_id}: {e}")
+    except Exception as e:
+        print(f"❌ Unexpected error for chat {user_id}: {e}")
+
+
+@app.on_message(filters.private & filters.incoming)
+async def handle_message(client: Client, message: Message):
+    user_id = message.from_user.id
 
     username = message.from_user.username
     if username and username.lower().endswith("_bot"):
@@ -113,28 +152,11 @@ def handle_message(client: Client, message: Message):
 
     print(f"🤖 Got message from {message.from_user.first_name} ({user_id}): {message.text or 'Non-text message'}")
 
-    try:
-        history = list(client.get_chat_history(user_id, limit=int(os.getenv("HISTORY_LIMIT"))))
-        if history and history[0].id == message.id:
-            history = history[1:]
-
-        limit = int(os.getenv("HISTORY_LIMIT")) - 1
-        prev_msgs = list(reversed(history[:limit]))
-
-        openai_messages = build_openai_messages(client, prev_msgs, message, system_prompt)
-
-        print(f"🤖 Sending message to AI api")
-        # print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
-
-        reply = ai_client.complete(openai_messages)
-
-        print(f"🤖 Reply to {message.from_user.first_name}: {reply}")
-        message.reply_text(reply)
-    except ValueError as e:
-        print(f"❌ Error for chat {message.chat.id}: {e}")
-    except KeyError as e:
-        print(f"❌ Error for chat {message.chat.id}: {e}")
-    except Exception as e:
-        print(f"❌ Unexpected error for chat {message.chat.id}: {e}")
+    async with waiting_lock:
+        if user_id in waiting_users:
+            waiting_users[user_id].append(message)
+            return
+        waiting_users[user_id] = [message]
+        asyncio.create_task(process_waiting_messages(client, user_id))
 
 app.run()
