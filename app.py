@@ -75,6 +75,23 @@ def keep_last_image_only(messages):
     messages[last_index]["content"].append(last_image)
     return messages
 
+def merge_text_parts(messages):
+    for msg in messages:
+        new_content = []
+        buffer = []
+        for part in msg["content"]:
+            if part.get("type") == "text":
+                buffer.append(part["text"])
+            else:
+                if buffer:
+                    new_content.append({"type": "text", "text": "\n".join(buffer)})
+                    buffer = []
+                new_content.append(part)
+        if buffer:
+            new_content.append({"type": "text", "text": "\n".join(buffer)})
+        msg["content"] = new_content
+    return messages
+
 
 async def build_openai_messages(client: Client, history, new_messages, system_prompt: str):
     messages = [{"role": "system", "content": [{"type": "text", "text": system_prompt}]}]
@@ -104,6 +121,7 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
             messages.append({"role": "user", "content": combined_new})
 
     messages = keep_last_image_only(messages)
+    messages = merge_text_parts(messages)
     return messages
 
 async def process_waiting_messages(client: Client, user_id: int):
