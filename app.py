@@ -107,7 +107,8 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     return messages
 
 async def process_waiting_messages(client: Client, user_id: int):
-    await asyncio.sleep(5)
+    print(f"🤖 Processing waiting messages for {user_id}")
+    await asyncio.sleep(int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10)))
     async with waiting_lock:
         msgs = waiting_users.pop(user_id, [])
     if not msgs:
