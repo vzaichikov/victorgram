@@ -32,7 +32,7 @@ ai_client = AIClient()
 waiting_users = {}
 waiting_lock = asyncio.Lock()
 
-def message_to_content(client: Client, msg: Message):
+async def message_to_content(client: Client, msg: Message):
     parts = []
     text = msg.text or msg.caption
 
@@ -45,9 +45,9 @@ def message_to_content(client: Client, msg: Message):
     media = None
     mime_type = "image/jpeg"
     if msg.photo:
-        media = client.download_media(msg, in_memory=True)
+        media = await client.download_media(msg, in_memory=True)
     elif msg.document and msg.document.mime_type and msg.document.mime_type.startswith("image/"):
-        media = client.download_media(msg, in_memory=True)
+        media = await client.download_media(msg, in_memory=True)
         mime_type = msg.document.mime_type
 
     if media:
@@ -76,11 +76,11 @@ def keep_last_image_only(messages):
     return messages
 
 
-def build_openai_messages(client: Client, history, new_messages, system_prompt: str):
+async def build_openai_messages(client: Client, history, new_messages, system_prompt: str):
     messages = [{"role": "system", "content": [{"type": "text", "text": system_prompt}]}]
 
     for msg in history:
-        prepared = message_to_content(client, msg)
+        prepared = await message_to_content(client, msg)
         if prepared != 0:
             role = "assistant" if msg.outgoing else "user"
             if messages[-1]["role"] == role:
@@ -93,7 +93,7 @@ def build_openai_messages(client: Client, history, new_messages, system_prompt: 
 
     combined_new = []
     for msg in new_messages:
-        prepared = message_to_content(client, msg)
+        prepared = await message_to_content(client, msg)
         if prepared != 0:
             combined_new.extend(prepared)
 
@@ -107,7 +107,7 @@ def build_openai_messages(client: Client, history, new_messages, system_prompt: 
     return messages
 
 async def process_waiting_messages(client: Client, user_id: int):
-    await asyncio.sleep(2)
+    await asyncio.sleep(5)
     async with waiting_lock:
         msgs = waiting_users.pop(user_id, [])
     if not msgs:
@@ -115,17 +115,28 @@ async def process_waiting_messages(client: Client, user_id: int):
     system_prompt = get_system_prompt(user_id)
     print(f"🤖 Processing {len(msgs)} messages from {user_id}")
     try:
-        history = list(client.get_chat_history(user_id, limit=int(os.getenv("HISTORY_LIMIT")) + len(msgs)))
+        history = []
+        limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
+        async for m in client.get_chat_history(user_id, limit=limit):
+            history.append(m)
+
+        history = []
+        limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
+        async for m in client.get_chat_history(user_id, limit=limit):
+            history.append(m)
+
         for m in reversed(msgs):
             if history and history[0].id == m.id:
                 history = history[1:]
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
-        openai_messages = build_openai_messages(client, prev_msgs, msgs, system_prompt)
+        openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt)
         print("🤖 Sending message to AI api")
+        print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
         reply = ai_client.complete(openai_messages)
         print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
-        msgs[-1].reply_text(reply)
+
+        await msgs[-1].reply_text(reply)
     except ValueError as e:
         print(f"❌ Error for chat {user_id}: {e}")
     except KeyError as e:
