@@ -56,6 +56,22 @@ def message_to_content(client: Client, msg: Message):
     return parts
 
 
+def keep_last_image_only(messages):
+    last_index = None
+    last_image = None
+    for i, msg in enumerate(messages):
+        for part in msg["content"]:
+            if part.get("type") == "image_url":
+                last_index = i
+                last_image = part
+    if last_index is None:
+        return messages
+    for msg in messages:
+        msg["content"] = [p for p in msg["content"] if p.get("type") != "image_url"]
+    messages[last_index]["content"].append(last_image)
+    return messages
+
+
 def build_openai_messages(client: Client, history, new_message: Message, system_prompt: str):
     messages = [{"role": "system", "content": [{"type": "text", "text": system_prompt}]}]
     for msg in history:
@@ -74,6 +90,7 @@ def build_openai_messages(client: Client, history, new_message: Message, system_
             messages[-1]["content"].extend(prepared_new)
         else:
             messages.append({"role": "user", "content": prepared_new})
+    messages = keep_last_image_only(messages)
     return messages
 
 @app.on_message(filters.private & filters.incoming)
