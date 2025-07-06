@@ -9,8 +9,16 @@ from ai_client import AIClient
 
 load_dotenv(".env")
 
+SYSTEM_PROMPTS_DIR = "SYSTEM_PROMPTS"
 with open("system_prompt.txt", "r", encoding="utf-8") as f:
-    SYSTEM_PROMPT = f.read().strip()
+    GENERAL_SYSTEM_PROMPT = f.read().strip()
+
+def get_system_prompt(user_id: int) -> str:
+    path = os.path.join(SYSTEM_PROMPTS_DIR, f"{user_id}.txt")
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    return GENERAL_SYSTEM_PROMPT
 app = Client(
     name=os.getenv("APP_NAME"),
     api_id=int(os.getenv("API_ID")),
@@ -47,8 +55,8 @@ def message_to_content(client: Client, msg: Message):
     return parts
 
 
-def build_openai_messages(client: Client, history, new_message: Message):
-    messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
+def build_openai_messages(client: Client, history, new_message: Message, system_prompt: str):
+    messages = [{"role": "system", "content": [{"type": "text", "text": system_prompt}]}]
     for msg in history:
         prepared = message_to_content(client, msg)
 
@@ -70,6 +78,7 @@ def build_openai_messages(client: Client, history, new_message: Message):
 @app.on_message(filters.private & filters.incoming)
 def handle_message(client: Client, message: Message):
     user_id = message.from_user.id
+    system_prompt = get_system_prompt(user_id)
 
     username = message.from_user.username
     if username and username.lower().endswith("_bot"):
@@ -94,7 +103,7 @@ def handle_message(client: Client, message: Message):
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
 
-        openai_messages = build_openai_messages(client, prev_msgs, message)
+        openai_messages = build_openai_messages(client, prev_msgs, message, system_prompt)
 
         print(f"🤖 Sending message to AI api")
         print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
