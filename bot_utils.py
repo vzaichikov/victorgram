@@ -12,7 +12,7 @@ with open("system_prompt.txt", "r", encoding="utf-8") as f:
 def get_system_prompt(user_id: int) -> str:
     path = os.path.join(SYSTEM_PROMPTS_DIR, f"{user_id}.txt")
     if os.path.exists(path):
-        print(f"\u2139\ufe0f Using custom system prompt for user {user_id}")
+        print(f"ℹ️ Using custom system prompt for user {user_id}")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     return GENERAL_SYSTEM_PROMPT
@@ -108,14 +108,14 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     return messages
 
 async def process_waiting_messages(client: Client, user_id: int, waiting_users, waiting_lock, ai_client):
-    print(f"\U0001F916 Processing waiting messages for {user_id}")
+    print(f"🤖 Processing waiting messages for {user_id}")
     await asyncio.sleep(int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10)))
     async with waiting_lock:
         msgs = waiting_users.pop(user_id, [])
     if not msgs:
         return
     system_prompt = get_system_prompt(user_id)
-    print(f"\U0001F916 Processing {len(msgs)} messages from {user_id}")
+    print(f"🤖 Processing {len(msgs)} messages from {user_id}")
     try:
         history = []
         limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
@@ -133,16 +133,16 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
         openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt)
-        print("\U0001F916 Sending message to AI api")
+        print("🤖 Sending message to AI api")
         print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
         reply = ai_client.complete(openai_messages)
-        print(f"\U0001F916 Reply to {msgs[-1].from_user.first_name}: {reply}")
+        print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
 
         await msgs[-1].reply_text(reply)
     except ValueError as e:
-        print(f"\u274C Error for chat {user_id}: {e}")
+        print(f"⛔ Error for chat {user_id}: {e}")
     except KeyError as e:
-        print(f"\u274C Error for chat {user_id}: {e}")
+        print(f"⛔ Error for chat {user_id}: {e}")
     except Exception as e:
-        print(f"\u274C Unexpected error for chat {user_id}: {e}")
+        print(f"⛔ Unexpected error for chat {user_id}: {e}")
 
