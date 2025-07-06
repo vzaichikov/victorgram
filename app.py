@@ -69,6 +69,8 @@ def handle_message(client: Client, message: Message):
         print(f"Skipping group/channel: {message.chat.id}")
         return
 
+    print(f"🤖 Got message from {message.from_user.first_name}: {message.text or 'Non-text message'}")
+
     try:
         history = list(client.get_chat_history(user_id, limit=int(os.getenv("HISTORY_LIMIT"))))
         if history and history[0].id == message.id:
@@ -79,8 +81,7 @@ def handle_message(client: Client, message: Message):
 
         openai_messages = build_openai_messages(client, prev_msgs, message)
 
-        print(f"{openai_messages}");
-
+        print(f"🤖 Sending message to AI api")
         reply = ai_client.complete(openai_messages)
 
         print(f"🤖 Reply to {message.from_user.first_name}: {reply}")

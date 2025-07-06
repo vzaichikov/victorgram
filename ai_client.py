@@ -10,7 +10,7 @@ class AIClient:
         if use_ollama:
             api_key = os.getenv("OLLAMA_API_KEY")
             base_url = os.getenv("OLLAMA_API_BASE_URL")
-            self.model = os.getenv("OLLAMA_API_MODEL", "llama3")
+            self.model = os.getenv("OLLAMA_API_MODEL", "gemma3:27b")
         else:
             api_key = os.getenv("OPENAI_API_KEY")
             base_url = os.getenv("OPENAI_API_BASE_URL")
