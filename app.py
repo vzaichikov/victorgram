@@ -21,6 +21,10 @@ ai_client = AIClient()
 def message_to_content(client: Client, msg: Message):
     parts = []
     text = msg.text or msg.caption
+
+    if not text and not msg.photo and not msg.document:
+        return 0
+
     if text:
         parts.append({"type": "text", "text": text})
 
@@ -45,9 +49,12 @@ def message_to_content(client: Client, msg: Message):
 def build_openai_messages(client: Client, history, new_message: Message):
     messages = [{"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]}]
     for msg in history:
-        content = message_to_content(client, msg)
-        role = "assistant" if msg.outgoing else "user"
-        messages.append({"role": role, "content": content})
+        prepared_message = message_to_content(client, msg)
+
+        if prepared_message != 0:
+            content = message_to_content(client, msg)
+            role = "assistant" if msg.outgoing else "user"
+            messages.append({"role": role, "content": content})
 
     messages.append({"role": "user", "content": message_to_content(client, new_message)})
     return messages
