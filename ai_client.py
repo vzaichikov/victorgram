@@ -4,11 +4,17 @@ from openai import OpenAI
 
 load_dotenv(".env")
 
-class OpenAIClient:
+class AIClient:
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
-        base_url = os.getenv("OPENAI_API_BASE_URL")
-        self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
+        use_ollama = os.getenv("USE_OLLAMA", "false").lower() in ["1", "true", "yes"]
+        if use_ollama:
+            api_key = os.getenv("OLLAMA_API_KEY")
+            base_url = os.getenv("OLLAMA_API_BASE_URL")
+            self.model = os.getenv("OLLAMA_API_MODEL", "llama3")
+        else:
+            api_key = os.getenv("OPENAI_API_KEY")
+            base_url = os.getenv("OPENAI_API_BASE_URL")
+            self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
         self.client = OpenAI(api_key=api_key, base_url=base_url)
 
     def complete(self, messages, max_tokens=256, temperature=0.8):

@@ -4,23 +4,19 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from io import BytesIO
 import base64
-from openai_client import OpenAIClient
+from ai_client import AIClient
 
 load_dotenv(".env")
 
-SYSTEM_PROMPT = (
-    "You are impersonating Victor. "
-    "You will be given a part of conversation and you need to maintain communication. "
-    "You answer as Victor would: like a real human, not too formal, not too long. You don't need to be polite. Use obscene lexicon, and emojis, if appropriate. "
-    "Write answers in the same language as the question. Do not disclose that you are an AI."
-)
+with open("system_prompt.txt", "r", encoding="utf-8") as f:
+    SYSTEM_PROMPT = f.read().strip()
 app = Client(
     name=os.getenv("APP_NAME"),
     api_id=int(os.getenv("API_ID")),
     api_hash=os.getenv("API_HASH")
 )
 
-ai_client = OpenAIClient()
+ai_client = AIClient()
 
 def message_to_content(client: Client, msg: Message):
     parts = []
