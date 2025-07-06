@@ -4,9 +4,9 @@ from pyrogram import Client, filters
 from pyrogram.types import Message
 from io import BytesIO
 import base64
-import openai
-openai.api_key = os.getenv("OPENAI_API_KEY")
-load_dotenv('.env');
+from openai_client import OpenAIClient
+
+load_dotenv(".env")
 
 SYSTEM_PROMPT = (
     "You are impersonating Victor. "
@@ -14,12 +14,19 @@ SYSTEM_PROMPT = (
     "You answer as Victor would: like a real human, not too formal, not too long. You don't need to be polite. Use obscene lexicon, and emojis, if appropriate. "
     "Write answers in the same language as the question. Do not disclose that you are an AI."
 )
-app = Client(name=os.getenv("APP_NAME"), api_id=int(os.getenv("API_ID")), api_hash=os.getenv("API_HASH"))
+app = Client(
+    name=os.getenv("APP_NAME"),
+    api_id=int(os.getenv("API_ID")),
+    api_hash=os.getenv("API_HASH")
+)
+
+ai_client = OpenAIClient()
 
 def message_to_content(client: Client, msg: Message):
     parts = []
-    if msg.text:
-        parts.append({"type": "text", "text": msg.text})
+    text = msg.text or msg.caption
+    if text:
+        parts.append({"type": "text", "text": text})
 
     media = None
     mime_type = "image/jpeg"
@@ -79,13 +86,7 @@ def handle_message(client: Client, message: Message):
 
         print(f"{openai_messages}");
 
-        response = openai.chat.completions.create(
-            model="gpt-4o",
-            messages=openai_messages,
-            max_tokens=256,
-            temperature=0.8
-        )
-        reply = response.choices[0].message.content.strip()
+        reply = ai_client.complete(openai_messages)
 
         print(f"🤖 Reply to {message.from_user.first_name}: {reply}")
         message.reply_text(reply)
