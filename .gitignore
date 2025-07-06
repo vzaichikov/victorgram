@@ -4,3 +4,4 @@
 *.session
 *.session-journal
 __pycache__
+prompts/*

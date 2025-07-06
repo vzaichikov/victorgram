@@ -9,13 +9,14 @@ from ai_client import AIClient
 
 load_dotenv(".env")
 
-SYSTEM_PROMPTS_DIR = "SYSTEM_PROMPTS"
+SYSTEM_PROMPTS_DIR = "prompts"
 with open("system_prompt.txt", "r", encoding="utf-8") as f:
     GENERAL_SYSTEM_PROMPT = f.read().strip()
 
 def get_system_prompt(user_id: int) -> str:
     path = os.path.join(SYSTEM_PROMPTS_DIR, f"{user_id}.txt")
     if os.path.exists(path):
+        print(f"ℹ️ Using custom system prompt for user {user_id}")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     return GENERAL_SYSTEM_PROMPT
@@ -106,7 +107,7 @@ def handle_message(client: Client, message: Message):
         openai_messages = build_openai_messages(client, prev_msgs, message, system_prompt)
 
         print(f"🤖 Sending message to AI api")
-        print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
+        # print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
 
         reply = ai_client.complete(openai_messages)
 
