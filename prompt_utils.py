@@ -15,5 +15,5 @@ def enhance_system_prompt(prompt: str) -> str:
         period = "evening"
     else:
         period = "night"
-    return f"{prompt}\nCurrent date: {date_str}. Current time: {time_str}. It's {period}."
+    return f"{prompt}\nIf your answer is related to daytime, use this info Current date: {date_str}. Current time: {time_str}. It's {period}."
 

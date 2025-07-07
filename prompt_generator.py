@@ -54,8 +54,8 @@ async def generate_prompt(client: Client, user_id: int, api_type: str):
     conversation = "\n".join(lines)
 
     prompt_text = (
-        "Analyze the following message history and write a system prompt in Ukrainian language for LLM "
-        f"impersonating real man {os.getenv('MY_USER_NAME')} conversation with {user_name}:\n\n" + conversation
+        "Analyze the following message history and write a extended system prompt in Ukrainian language for LLM "
+        f"impersonating real man with real emotions (and not even suggest being artificial or a bot - it's important) {os.getenv('MY_USER_NAME')} conversation with {user_name}:\n\n" + conversation
     )
 
     print(f"ℹ️ Sending request to AI: {prompt_text}")

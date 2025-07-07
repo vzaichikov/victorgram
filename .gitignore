@@ -5,3 +5,4 @@
 *.session-journal
 __pycache__
 prompts/*
+system_prompt.txt
