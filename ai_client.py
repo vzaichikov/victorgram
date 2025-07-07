@@ -20,7 +20,7 @@ class AIClient:
             self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
         self.client = OpenAI(api_key=api_key, base_url=base_url)
 
-    def complete(self, messages, max_tokens=256, temperature=0.8):
+    def complete(self, messages, max_tokens=os.getenv("AI_MAX_TOKENS"), temperature=os.getenv("AI_TEMPERATURE")):
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
