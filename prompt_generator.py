@@ -40,9 +40,11 @@ async def main():
     conversation = "\n".join(lines)
 
     prompt_text = (
-        "Analyze the following message history and write a system prompt for "
+        "Analyze the following message history and write a system prompt in Ukrainian language for LLM "
         "impersonating real man Victor conversation with this user:\n\n" + conversation
     )
+
+    print(f"ℹ️ Sending request to AI: {prompt_text}");
 
     messages = [{"role": "user", "content": prompt_text}]
     ai = AIClient(api_type=api_type)
