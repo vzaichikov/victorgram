@@ -56,7 +56,9 @@ async def main():
     out_path = os.path.join("prompts", f"{user_id}.txt")
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(result.strip())
-    print(f"Prompt saved to {out_path}")
+
+    print(f"ℹ️ AI returned prompt: {result.strip()}")
+    print(f"✅ Prompt saved to {out_path}")
 
 
 if __name__ == "__main__":
