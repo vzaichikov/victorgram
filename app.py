@@ -39,7 +39,7 @@ async def handle_message(client: Client, message: Message):
         return
 
     print(
-        f"\U0001F916 Got message from {message.from_user.first_name} ({user_id}): {message.text or 'Non-text message'}"
+        f"🤖 Got message from {message.from_user.first_name} ({user_id}): {message.text or 'Non-text message'}"
     )
 
     async with waiting_lock:
