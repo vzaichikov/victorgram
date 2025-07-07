@@ -34,14 +34,14 @@ async def main():
     history.reverse()
     lines = []
     for m in history:
-        role = "Victor" if m.outgoing else "User"
+        role = os.getenv("MY_USER_NAME") if m.outgoing else "User"
         text = m.text or m.caption or ""
         lines.append(f"{role}: {text}")
     conversation = "\n".join(lines)
 
     prompt_text = (
         "Analyze the following message history and write a system prompt in Ukrainian language for LLM "
-        "impersonating real man Victor conversation with this user:\n\n" + conversation
+        f"impersonating real man {os.getenv("MY_USER_NAME")} conversation with this user:\n\n" + conversation
     )
 
     print(f"ℹ️ Sending request to AI: {prompt_text}");
