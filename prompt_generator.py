@@ -27,6 +27,8 @@ async def main():
 
     history = []
     async with client:
+        user = await client.get_users(user_id)
+        user_name = user.first_name or user.username or str(user_id)
         async for m in client.get_chat_history(user_id, limit=200):
             if m.text or m.caption:
                 history.append(m)
@@ -34,14 +36,14 @@ async def main():
     history.reverse()
     lines = []
     for m in history:
-        role = os.getenv("MY_USER_NAME") if m.outgoing else "User"
+        role = os.getenv("MY_USER_NAME") if m.outgoing else user_name
         text = m.text or m.caption or ""
         lines.append(f"{role}: {text}")
     conversation = "\n".join(lines)
 
     prompt_text = (
         "Analyze the following message history and write a system prompt in Ukrainian language for LLM "
-        f"impersonating real man {os.getenv("MY_USER_NAME")} conversation with this user:\n\n" + conversation
+        f"impersonating real man {os.getenv('MY_USER_NAME')} conversation with {user_name}:\n\n" + conversation
     )
 
     print(f"ℹ️ Sending request to AI: {prompt_text}");
