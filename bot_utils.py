@@ -4,6 +4,7 @@ import asyncio
 import base64
 from pyrogram import Client
 from pyrogram.types import Message
+from pyrogram.enums import ChatAction
 
 SYSTEM_PROMPTS_DIR = "prompts"
 with open("system_prompt.txt", "r", encoding="utf-8") as f:
@@ -145,4 +146,6 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
         print(f"⛔ Error for chat {user_id}: {e}")
     except Exception as e:
         print(f"⛔ Unexpected error for chat {user_id}: {e}")
+    finally:
+        await client.send_chat_action(user_id, ChatAction.CANCEL)
 

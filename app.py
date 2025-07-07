@@ -3,6 +3,7 @@ import asyncio
 from dotenv import load_dotenv
 from pyrogram import Client, filters
 from pyrogram.types import Message
+from pyrogram.enums import ChatAction
 from ai_client import AIClient
 from bot_utils import process_waiting_messages
 
@@ -46,6 +47,7 @@ async def handle_message(client: Client, message: Message):
             waiting_users[user_id].append(message)
             return
         waiting_users[user_id] = [message]
+        await client.send_chat_action(user_id, ChatAction.TYPING)
         asyncio.create_task(
             process_waiting_messages(client, user_id, waiting_users, waiting_lock, ai_client)
         )
