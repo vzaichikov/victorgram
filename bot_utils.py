@@ -10,13 +10,13 @@ SYSTEM_PROMPTS_DIR = "prompts"
 with open("system_prompt.txt", "r", encoding="utf-8") as f:
     GENERAL_SYSTEM_PROMPT = f.read().strip()
 
-def get_system_prompt(user_id: int) -> str:
+def get_system_prompt(user_id: int, user_name: str) -> str:
     path = os.path.join(SYSTEM_PROMPTS_DIR, f"{user_id}.txt")
     if os.path.exists(path):
         print(f"ℹ️ Using custom system prompt for user {user_id}")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
-    return GENERAL_SYSTEM_PROMPT
+    return GENERAL_SYSTEM_PROMPT + f"\nThe other person's name is {user_name}."
 
 async def message_to_content(client: Client, msg: Message):
     parts = []
@@ -115,7 +115,8 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
         msgs = waiting_users.pop(user_id, [])
     if not msgs:
         return
-    system_prompt = get_system_prompt(user_id)
+    user_name = msgs[-1].from_user.first_name or msgs[-1].from_user.username or str(user_id)
+    system_prompt = get_system_prompt(user_id, user_name)
     print(f"🤖 Processing {len(msgs)} messages from {user_id}")
     try:
         history = []
