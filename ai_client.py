@@ -5,8 +5,11 @@ from openai import OpenAI
 load_dotenv(".env")
 
 class AIClient:
-    def __init__(self):
-        use_ollama = os.getenv("USE_OLLAMA", "false").lower() in ["1", "true", "yes"]
+    def __init__(self, api_type=None):
+        if api_type is None:
+            use_ollama = os.getenv("USE_OLLAMA", "false").lower() in ["1", "true", "yes"]
+        else:
+            use_ollama = api_type.lower() == "ollama"
         if use_ollama:
             api_key = os.getenv("OLLAMA_API_KEY")
             base_url = os.getenv("OLLAMA_API_BASE_URL")
