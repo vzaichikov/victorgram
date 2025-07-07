@@ -5,6 +5,7 @@ import base64
 from pyrogram import Client
 from pyrogram.types import Message
 from pyrogram.enums import ChatAction
+from prompt_utils import enhance_system_prompt
 
 SYSTEM_PROMPTS_DIR = "prompts"
 with open("system_prompt.txt", "r", encoding="utf-8") as f:
@@ -116,7 +117,7 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
     if not msgs:
         return
     user_name = msgs[-1].from_user.first_name or msgs[-1].from_user.username or str(user_id)
-    system_prompt = get_system_prompt(user_id, user_name)
+    system_prompt = enhance_system_prompt(get_system_prompt(user_id, user_name))
     print(f"🤖 Processing {len(msgs)} messages from {user_id}")
     try:
         history = []
