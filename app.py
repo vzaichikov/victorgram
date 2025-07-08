@@ -1,13 +1,17 @@
 import os
+import sys
 import asyncio
 from dotenv import load_dotenv
+
+instance = sys.argv[1] if len(sys.argv) > 1 else ""
+env_file = f".env.{instance}" if instance else ".env"
+load_dotenv(env_file)
+
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ChatAction
 from ai_client import AIClient
 from bot_utils import process_waiting_messages
-
-load_dotenv(".env")
 
 app = Client(
     name=os.getenv("APP_NAME"),
