@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from pyrogram import Client
 from ai_client import AIClient
 
-PROMPTS_DIR = "prompts"
+PROMPTS_DIR = os.path.join("prompts", os.getenv("INSTANCE_NAME", ""))
 NAMES_FILE = os.path.join(PROMPTS_DIR, "names.txt")
 
 

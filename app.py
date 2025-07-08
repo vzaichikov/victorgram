@@ -3,13 +3,15 @@ import sys
 import asyncio
 from dotenv import load_dotenv
 
-instance = sys.argv[1] if len(sys.argv) > 1 else ""
-if instance:
-    env_file = f".env.{instance}"
-    print(f"ℹ️ Loading instance: {instance}")
-else:
-    env_file = ".env"
+if len(sys.argv) != 2:
+    print("Usage: python app.py <instance>")
+    sys.exit(1)
+
+instance = sys.argv[1]
+env_file = f".env.{instance}"
+print(f"ℹ️ Loading instance: {instance}")
 load_dotenv(env_file)
+os.environ["INSTANCE_NAME"] = instance
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
