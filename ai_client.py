@@ -1,8 +1,5 @@
 import os
-from dotenv import load_dotenv
 from openai import OpenAI
-
-load_dotenv(".env")
 
 class AIClient:
     def __init__(self, api_type=None):
