@@ -17,7 +17,16 @@ class AIClient:
             self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
         self.client = OpenAI(api_key=api_key, base_url=base_url)
 
-    def complete(self, messages, max_tokens=int(os.getenv("AI_MAX_TOKENS")), temperature=float(os.getenv("AI_TEMPERATURE"))):
+    def complete(self, messages, max_tokens=None, temperature=None):
+        if max_tokens is None:
+            env_val = os.getenv("AI_MAX_TOKENS")
+            if env_val is not None:
+                max_tokens = int(env_val)
+        if temperature is None:
+            env_val = os.getenv("AI_TEMPERATURE")
+            if env_val is not None:
+                temperature = float(env_val)
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
