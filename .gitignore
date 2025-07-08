@@ -1,3 +1,4 @@
+.env.*
 .env
 .venv
 .idea
@@ -5,3 +6,4 @@
 *.session-journal
 __pycache__
 prompts/*
+system/*

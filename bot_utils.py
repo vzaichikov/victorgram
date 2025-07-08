@@ -139,7 +139,7 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
         prev_msgs = list(reversed(history[:limit]))
         openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt)
         print("🤖 Sending message to AI api")
-        print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
+       #print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
         reply = ai_client.complete(openai_messages)
         print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
 

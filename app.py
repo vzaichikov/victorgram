@@ -4,7 +4,11 @@ import asyncio
 from dotenv import load_dotenv
 
 instance = sys.argv[1] if len(sys.argv) > 1 else ""
-env_file = f".env.{instance}" if instance else ".env"
+if instance:
+    env_file = f".env.{instance}"
+    print(f"ℹ️ Loading instance: {instance}")
+else:
+    env_file = ".env"
 load_dotenv(env_file)
 
 from pyrogram import Client, filters
