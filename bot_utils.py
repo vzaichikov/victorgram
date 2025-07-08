@@ -8,7 +8,9 @@ from pyrogram.enums import ChatAction
 from prompt_utils import enhance_system_prompt
 
 SYSTEM_PROMPTS_DIR = "prompts"
-with open("system_prompt.txt", "r", encoding="utf-8") as f:
+SYSTEM_DIR = "system"
+prompt_file = os.getenv("MAIN_SYSTEM_PROMPT_FILE", "main.txt")
+with open(os.path.join(SYSTEM_DIR, prompt_file), "r", encoding="utf-8") as f:
     GENERAL_SYSTEM_PROMPT = f.read().strip()
 
 def get_system_prompt(user_id: int, user_name: str) -> str:
