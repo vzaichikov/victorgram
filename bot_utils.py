@@ -4,6 +4,7 @@ import asyncio
 import base64
 from pyrogram import Client
 from pyrogram.types import Message
+from ai_client import AIClient
 from pyrogram.enums import ChatAction
 from prompt_utils import enhance_system_prompt
 
@@ -23,12 +24,21 @@ def get_system_prompt(user_id: int, user_name: str) -> str:
             return f.read().strip()
     return GENERAL_SYSTEM_PROMPT + f"\nThe other person's name is {user_name}."
 
-async def message_to_content(client: Client, msg: Message):
+async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
     parts = []
     text = msg.text or msg.caption
 
-    if not text and not msg.photo and not msg.document:
+    if not text and not msg.photo and not msg.document and not msg.voice and not msg.audio and not msg.video_note:
         return 0
+
+    if msg.voice or msg.audio or msg.video_note:
+        try:
+            media = await client.download_media(msg, in_memory=True)
+            transcript = ai_client.transcribe(media.getvalue())
+            if transcript:
+                text = (text + "\n" if text else "") + transcript
+        except Exception as e:
+            print(f"⛔ Whisper error: {e}")
 
     if text:
         parts.append({"type": "text", "text": text})
@@ -82,11 +92,11 @@ def merge_text_parts(messages):
         msg["content"] = new_content
     return messages
 
-async def build_openai_messages(client: Client, history, new_messages, system_prompt: str):
+async def build_openai_messages(client: Client, history, new_messages, system_prompt: str, ai_client: AIClient):
     messages = [{"role": "system", "content": [{"type": "text", "text": system_prompt}]}]
 
     for msg in history:
-        prepared = await message_to_content(client, msg)
+        prepared = await message_to_content(client, msg, ai_client)
         if prepared != 0:
             role = "assistant" if msg.outgoing else "user"
             if messages[-1]["role"] == role:
@@ -99,7 +109,7 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
 
     combined_new = []
     for msg in new_messages:
-        prepared = await message_to_content(client, msg)
+        prepared = await message_to_content(client, msg, ai_client)
         if prepared != 0:
             combined_new.extend(prepared)
 
@@ -139,7 +149,7 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
                 history = history[1:]
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
-        openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt)
+        openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt, ai_client)
         print("🤖 Sending message to AI api")
        #print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
         reply = ai_client.complete(openai_messages)
