@@ -33,15 +33,19 @@ class AIClient:
 
         self.load_models()
 
-    def load_models(self):
-        """Load Whisper and verify Ollama model."""
+    def load_whisper(self):
         if whisper is None:
             raise RuntimeError("whisper package not installed")
 
         model_name = os.getenv("WHISPER_MODEL", "turbo")
+        print(f"ℹ️ Loading Whisper model {model_name}")
         logging.info("Loading Whisper model '%s'", model_name)
-        self._whisper_model = whisper.load_model(model_name, device="cuda")
+        self._whisper_model = whisper.load_model(model_name, device=os.getenv("WHISPER_DEVICE"))
+        print("✅ Loaded Whisper model {model_name}")
         logging.info("Whisper model '%s' loaded", model_name)
+
+    def load_models(self):
+        self.load_whisper()
 
         if self.use_ollama:
             try:
@@ -53,6 +57,7 @@ class AIClient:
                 short = self.model.split(":")[0]
                 if self.model not in names and short not in names:
                     raise RuntimeError(f"Ollama model '{self.model}' not found")
+                print(f"✅ Ollama model {self.model} available")
                 logging.info("Ollama model '%s' available", self.model)
             except Exception as e:
                 raise RuntimeError(f"Failed to verify Ollama model '{self.model}': {e}")
@@ -65,7 +70,6 @@ class AIClient:
                     logging.info("Whisper model unloaded due to inactivity")
 
     def transcribe(self, audio_bytes: bytes, filename: str = "audio.ogg") -> str:
-        """Transcribe audio using the local Whisper model."""
         import tempfile
 
         self._maybe_unload_models()
@@ -74,10 +78,7 @@ class AIClient:
             raise RuntimeError("whisper package not installed")
 
         if self._whisper_model is None:
-            model_name = os.getenv("WHISPER_MODEL", "turbo")
-            logging.info("Loading Whisper model '%s'", model_name)
-            self._whisper_model = whisper.load_model(model_name, device="cuda")
-            logging.info("Whisper model '%s' loaded", model_name)
+            self.load_whisper()
 
         suffix = os.path.splitext(filename)[1] or ".ogg"
         tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
