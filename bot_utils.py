@@ -51,7 +51,8 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
         media = await client.download_media(msg, in_memory=True)
     elif msg.document and msg.document.mime_type:
         mime_type = msg.document.mime_type
-        if mime_type.startswith("image/"):
+        print(f"ℹ️ Got document with mime type {mime_type}")
+        if mime_type.startswith("image/") and mime_type.endswith(('jpg', 'jpeg', 'gif', 'png', 'webp', 'avif')):
             media = await client.download_media(msg, in_memory=True)
         #elif mime_type == "application/pdf" or msg.document.file_name.lower().endswith(".pdf"):
         # media = await client.download_media(msg, in_memory=True)
