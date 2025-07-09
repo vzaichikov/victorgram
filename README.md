@@ -10,7 +10,7 @@ VictorGram is a small Telegram bot that uses [Pyrogram](https://docs.pyrogram.or
 
 ## Setup
 
-1. Install the requirements:
+1. Install the requirements and ensure `ffmpeg` is available (required for `openai-whisper`):
    ```bash
    pip install -r requirements.txt
    ```
