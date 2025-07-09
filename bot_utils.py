@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import base64
+import logging
 from pyrogram import Client
 from pyrogram.types import Message
 from pyrogram.enums import ChatAction
@@ -15,10 +16,13 @@ if not INSTANCE_NAME:
 with open(os.path.join(SYSTEM_DIR, f"{INSTANCE_NAME}.txt"), "r", encoding="utf-8") as f:
     GENERAL_SYSTEM_PROMPT = f.read().strip()
 
+logger = logging.getLogger(__name__)
+
 def get_system_prompt(user_id: int, user_name: str) -> str:
     path = os.path.join(SYSTEM_PROMPTS_DIR, INSTANCE_NAME, f"{user_id}.txt")
     if os.path.exists(path):
-        print(f"ℹ️ Using custom system prompt for user {user_id}")
+        print(f"\u2139\ufe0f Using custom system prompt for user {user_id}")
+        logger.info("\u2139\ufe0f Using custom system prompt for user %s", user_id)
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
     return GENERAL_SYSTEM_PROMPT + f"\nThe other person's name is {user_name}."
@@ -114,7 +118,8 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     return messages
 
 async def process_waiting_messages(client: Client, user_id: int, waiting_users, waiting_lock, ai_client):
-    print(f"🤖 Processing waiting messages for {user_id}")
+    print(f"\U0001F916 Processing waiting messages for {user_id}")
+    logger.info("\U0001F916 Processing waiting messages for %s", user_id)
     await asyncio.sleep(int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10)))
     async with waiting_lock:
         msgs = waiting_users.pop(user_id, [])
@@ -122,7 +127,8 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
         return
     user_name = msgs[-1].from_user.first_name or msgs[-1].from_user.username or str(user_id)
     system_prompt = enhance_system_prompt(get_system_prompt(user_id, user_name))
-    print(f"🤖 Processing {len(msgs)} messages from {user_id}")
+    print(f"\U0001F916 Processing {len(msgs)} messages from {user_id}")
+    logger.info("\U0001F916 Processing %s messages from %s", len(msgs), user_id)
     try:
         history = []
         limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
@@ -140,18 +146,23 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
         openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt)
-        print("🤖 Sending message to AI api")
+        print("\U0001F916 Sending message to AI api")
+        logger.info("\U0001F916 Sending message to AI api")
        #print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
         reply = ai_client.complete(openai_messages)
-        print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
+        print(f"\U0001F916 Reply to {msgs[-1].from_user.first_name}: {reply}")
+        logger.info("\U0001F916 Reply to %s: %s", msgs[-1].from_user.first_name, reply)
 
         await msgs[-1].reply_text(reply)
     except ValueError as e:
-        print(f"⛔ Error for chat {user_id}: {e}")
+        print(f"\u26D4 Error for chat {user_id}: {e}")
+        logger.error("\u26d4 Error for chat %s: %s", user_id, e)
     except KeyError as e:
-        print(f"⛔ Error for chat {user_id}: {e}")
+        print(f"\u26D4 Error for chat {user_id}: {e}")
+        logger.error("\u26d4 Error for chat %s: %s", user_id, e)
     except Exception as e:
-        print(f"⛔ Unexpected error for chat {user_id}: {e}")
+        print(f"\u26D4 Unexpected error for chat {user_id}: {e}")
+        logger.error("\u26d4 Unexpected error for chat %s: %s", user_id, e)
     finally:
         await client.send_chat_action(user_id, ChatAction.CANCEL)
 

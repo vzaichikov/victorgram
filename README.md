@@ -25,3 +25,13 @@ VictorGram is a small Telegram bot that uses [Pyrogram](https://docs.pyrogram.or
   ```
 
 The main entry point is `app.py` and helper functions are located in `bot_utils.py`.
+
+## Streamlit UI
+
+To manage the bot via a web interface and view logs, run:
+
+```bash
+streamlit run ui.py
+```
+
+The instance can be selected with the `BOT_INSTANCE` environment variable. Logs are saved to `bot.log`.
