@@ -41,7 +41,7 @@ class AIClient:
         print(f"ℹ️ Loading Whisper model {model_name}")
         logging.info("Loading Whisper model '%s'", model_name)
         self._whisper_model = whisper.load_model(model_name, device=os.getenv("WHISPER_DEVICE"))
-        print("✅ Loaded Whisper model {model_name}")
+        print(f"✅ Loaded Whisper model {model_name}")
         logging.info("Whisper model '%s' loaded", model_name)
 
     def load_models(self):
