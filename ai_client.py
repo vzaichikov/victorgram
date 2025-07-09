@@ -1,4 +1,7 @@
 import os
+import time
+import logging
+import requests
 from openai import OpenAI
 
 try:
@@ -9,10 +12,11 @@ except Exception:
 class AIClient:
     def __init__(self, api_type=None):
         if api_type is None:
-            use_ollama = os.getenv("USE_OLLAMA", "false").lower() in ["1", "true", "yes"]
+            self.use_ollama = os.getenv("USE_OLLAMA", "false").lower() in ["1", "true", "yes"]
         else:
-            use_ollama = api_type.lower() == "ollama"
-        if use_ollama:
+            self.use_ollama = api_type.lower() == "ollama"
+
+        if self.use_ollama:
             api_key = os.getenv("OLLAMA_API_KEY")
             base_url = os.getenv("OLLAMA_API_BASE_URL")
             self.model = os.getenv("OLLAMA_API_MODEL", "gemma3:27b")
@@ -20,18 +24,60 @@ class AIClient:
             api_key = os.getenv("OPENAI_API_KEY")
             base_url = os.getenv("OPENAI_API_BASE_URL")
             self.model = os.getenv("OPENAI_MODEL", "gpt-4o")
+
         self.client = OpenAI(api_key=api_key, base_url=base_url)
+
+        self.unload_timeout = int(os.getenv("MODEL_UNLOAD_TIMEOUT", "1800"))
+        self.last_used_time = time.time()
+        self._whisper_model = None
+
+        self.load_models()
+
+    def load_models(self):
+        """Load Whisper and verify Ollama model."""
+        if whisper is None:
+            raise RuntimeError("whisper package not installed")
+
+        model_name = os.getenv("WHISPER_MODEL", "base")
+        logging.info("Loading Whisper model '%s'", model_name)
+        self._whisper_model = whisper.load_model(model_name)
+        logging.info("Whisper model '%s' loaded", model_name)
+
+        if self.use_ollama:
+            try:
+                url = self.client.base_url.rstrip("/") + "/api/tags"
+                resp = requests.get(url, timeout=10)
+                resp.raise_for_status()
+                data = resp.json()
+                names = [m.get("name") for m in data.get("models", [])]
+                short = self.model.split(":")[0]
+                if self.model not in names and short not in names:
+                    raise RuntimeError(f"Ollama model '{self.model}' not found")
+                logging.info("Ollama model '%s' available", self.model)
+            except Exception as e:
+                raise RuntimeError(f"Failed to verify Ollama model '{self.model}': {e}")
+
+    def _maybe_unload_models(self):
+        if self.last_used_time and self.unload_timeout > 0:
+            if time.time() - self.last_used_time > self.unload_timeout:
+                if self._whisper_model is not None:
+                    self._whisper_model = None
+                    logging.info("Whisper model unloaded due to inactivity")
 
     def transcribe(self, audio_bytes: bytes, filename: str = "audio.ogg") -> str:
         """Transcribe audio using the local Whisper model."""
         import tempfile
 
+        self._maybe_unload_models()
+
         if whisper is None:
             raise RuntimeError("whisper package not installed")
 
-        if not hasattr(self, "_whisper_model"):
+        if self._whisper_model is None:
             model_name = os.getenv("WHISPER_MODEL", "base")
+            logging.info("Loading Whisper model '%s'", model_name)
             self._whisper_model = whisper.load_model(model_name)
+            logging.info("Whisper model '%s' loaded", model_name)
 
         suffix = os.path.splitext(filename)[1] or ".ogg"
         with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
@@ -39,9 +85,13 @@ class AIClient:
             tmp.flush()
             result = self._whisper_model.transcribe(tmp.name)
 
+        self.last_used_time = time.time()
+
         return result.get("text", "").strip()
 
     def complete(self, messages, max_tokens=None, temperature=None):
+        self._maybe_unload_models()
+
         if max_tokens is None:
             env_val = os.getenv("AI_MAX_TOKENS")
             if env_val is not None:
@@ -57,4 +107,6 @@ class AIClient:
             max_tokens=max_tokens,
             temperature=temperature,
         )
+        self.last_used_time = time.time()
         return response.choices[0].message.content.strip()
+
