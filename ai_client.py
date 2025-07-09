@@ -80,10 +80,14 @@ class AIClient:
             logging.info("Whisper model '%s' loaded", model_name)
 
         suffix = os.path.splitext(filename)[1] or ".ogg"
-        with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+        tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+        try:
             tmp.write(audio_bytes)
             tmp.flush()
+            tmp.close()
             result = self._whisper_model.transcribe(tmp.name)
+        finally:
+            os.remove(tmp.name)
 
         self.last_used_time = time.time()
 
