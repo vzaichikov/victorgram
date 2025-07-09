@@ -41,7 +41,7 @@ col1, col2 = st.columns(2)
 if col1.button("Start"):
     if st.session_state.process is None:
         log_path = os.path.join(LOG_DIR, f"{selected}.log")
-        log_file = open(log_path, "a")
+        log_file = open(log_path, "a", encoding="utf-8")
         proc = subprocess.Popen([sys.executable, "app.py", selected], stdout=log_file, stderr=log_file)
         st.session_state.process = proc
         st.session_state.logfile = log_path
@@ -57,4 +57,7 @@ log_placeholder = st.empty()
 if st.session_state.logfile:
     log_placeholder.text(tail(st.session_state.logfile, 40))
     time.sleep(1)
-    st.experimental_rerun()
+    if hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
+    else:
+        st.rerun()

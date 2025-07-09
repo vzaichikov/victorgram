@@ -22,7 +22,9 @@ def setup_logging(name: str):
     logger.addHandler(stream)
     if name:
         os.makedirs("logs", exist_ok=True)
-        file_handler = logging.FileHandler(os.path.join("logs", f"{name}.log"))
+        file_handler = logging.FileHandler(
+            os.path.join("logs", f"{name}.log"), encoding="utf-8"
+        )
         file_handler.setFormatter(fmt)
         logger.addHandler(file_handler)
 
