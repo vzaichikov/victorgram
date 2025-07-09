@@ -22,7 +22,7 @@ def setup_logging(name: str):
     if logger.handlers:
         return
     logger.setLevel(logging.INFO)
-    fmt = logging.Formatter("%(asctime)s %(message)s")
+    fmt = logging.Formatter("%(asctime)s %(message)s", datefmt="%H:%M")
     stream = logging.StreamHandler(sys.stdout)
     stream.setFormatter(fmt)
     logger.addHandler(stream)
