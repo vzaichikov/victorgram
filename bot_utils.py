@@ -33,9 +33,11 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
 
     if msg.voice or msg.audio or msg.video_note:
         try:
+            print("ℹ️ Got audio message, trying to transcript with Whisper")
             media = await client.download_media(msg, in_memory=True)
             transcript = ai_client.transcribe(media.getvalue())
             if transcript:
+                print(f"ℹ️ Got transcription: {transcript}")
                 text = (text + "\n" if text else "") + transcript
         except Exception as e:
             print(f"⛔ Whisper error: {e}")

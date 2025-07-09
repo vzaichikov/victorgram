@@ -40,7 +40,7 @@ class AIClient:
 
         model_name = os.getenv("WHISPER_MODEL", "turbo")
         logging.info("Loading Whisper model '%s'", model_name)
-        self._whisper_model = whisper.load_model(model_name)
+        self._whisper_model = whisper.load_model(model_name, device="cuda")
         logging.info("Whisper model '%s' loaded", model_name)
 
         if self.use_ollama:
@@ -76,7 +76,7 @@ class AIClient:
         if self._whisper_model is None:
             model_name = os.getenv("WHISPER_MODEL", "turbo")
             logging.info("Loading Whisper model '%s'", model_name)
-            self._whisper_model = whisper.load_model(model_name)
+            self._whisper_model = whisper.load_model(model_name, device="cuda")
             logging.info("Whisper model '%s' loaded", model_name)
 
         suffix = os.path.splitext(filename)[1] or ".ogg"
@@ -85,7 +85,7 @@ class AIClient:
             tmp.write(audio_bytes)
             tmp.flush()
             tmp.close()
-            result = self._whisper_model.transcribe(tmp.name)
+            result = self._whisper_model.transcribe(audio=tmp.name)
         finally:
             os.remove(tmp.name)
 

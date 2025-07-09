@@ -37,7 +37,6 @@ def setup_logging(name: str):
 
 setup_logging(instance)
 
-
 def log_print(*args, sep=" ", end="\n", **kwargs):
     logging.getLogger().info(sep.join(str(a) for a in args))
 
