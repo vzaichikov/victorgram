@@ -2,3 +2,4 @@ pyrogram>=2.0
 tgcrypto
 python-dotenv
 openai>=1.0.0
+streamlit

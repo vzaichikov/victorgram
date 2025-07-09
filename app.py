@@ -1,6 +1,7 @@
 import os
 import sys
 import asyncio
+import logging
 from dotenv import load_dotenv
 
 if len(sys.argv) != 2:
@@ -8,6 +9,33 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 instance = sys.argv[1]
+
+
+def setup_logging(name: str):
+    logger = logging.getLogger()
+    if logger.handlers:
+        return
+    logger.setLevel(logging.INFO)
+    fmt = logging.Formatter("%(asctime)s %(message)s")
+    stream = logging.StreamHandler(sys.stdout)
+    stream.setFormatter(fmt)
+    logger.addHandler(stream)
+    if name:
+        os.makedirs("logs", exist_ok=True)
+        file_handler = logging.FileHandler(os.path.join("logs", f"{name}.log"))
+        file_handler.setFormatter(fmt)
+        logger.addHandler(file_handler)
+
+
+setup_logging(instance)
+
+
+def log_print(*args, sep=" ", end="\n", **kwargs):
+    logging.getLogger().info(sep.join(str(a) for a in args))
+
+
+print = log_print
+
 env_file = f".env.{instance}"
 print(f"ℹ️ Loading instance: {instance}")
 load_dotenv(env_file)

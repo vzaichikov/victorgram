@@ -8,3 +8,4 @@ __pycache__
 prompts/*
 system/*
 !system/example.txt
+logs/
