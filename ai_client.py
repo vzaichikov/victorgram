@@ -38,14 +38,14 @@ class AIClient:
         if whisper is None:
             raise RuntimeError("whisper package not installed")
 
-        model_name = os.getenv("WHISPER_MODEL", "base")
+        model_name = os.getenv("WHISPER_MODEL", "turbo")
         logging.info("Loading Whisper model '%s'", model_name)
         self._whisper_model = whisper.load_model(model_name)
         logging.info("Whisper model '%s' loaded", model_name)
 
         if self.use_ollama:
             try:
-                url = self.client.base_url.rstrip("/") + "/api/tags"
+                url = str(self.client.base_url).rstrip("/v1/") + "/api/tags"
                 resp = requests.get(url, timeout=10)
                 resp.raise_for_status()
                 data = resp.json()
@@ -74,7 +74,7 @@ class AIClient:
             raise RuntimeError("whisper package not installed")
 
         if self._whisper_model is None:
-            model_name = os.getenv("WHISPER_MODEL", "base")
+            model_name = os.getenv("WHISPER_MODEL", "turbo")
             logging.info("Loading Whisper model '%s'", model_name)
             self._whisper_model = whisper.load_model(model_name)
             logging.info("Whisper model '%s' loaded", model_name)
