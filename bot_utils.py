@@ -54,7 +54,9 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
         if mime_type.startswith("image/"):
             media = await client.download_media(msg, in_memory=True)
         elif mime_type == "application/pdf" or msg.document.file_name.lower().endswith(".pdf"):
-            media = await client.download_media(msg, in_memory=True)
+            # media = await client.download_media(msg, in_memory=True)
+        elif mime_type.startswith("application/vnd.openxmlformats") or msg.document.file_name.lower().endswith(('.docx', '.doc', '.xlsx')):
+            # media = await client.download_media(msg, in_memory=True)
         elif mime_type.startswith("text/") or msg.document.file_name.lower().endswith(('.txt', '.md', '.log')):
             text_bytes = await client.download_media(msg, in_memory=True)
             try:
