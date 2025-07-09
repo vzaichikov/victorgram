@@ -2,6 +2,7 @@ import os
 import sys
 import asyncio
 import logging
+import builtins
 from dotenv import load_dotenv
 
 if len(sys.argv) != 2:
@@ -9,6 +10,11 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 instance = sys.argv[1]
+
+# Ensure console can display Unicode
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 
 def setup_logging(name: str):
@@ -37,6 +43,7 @@ def log_print(*args, sep=" ", end="\n", **kwargs):
 
 
 print = log_print
+builtins.print = log_print
 
 env_file = f".env.{instance}"
 print(f"ℹ️ Loading instance: {instance}")
