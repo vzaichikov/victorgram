@@ -18,27 +18,39 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 def setup_logging(name: str):
-    logger = logging.getLogger()
-    if logger.handlers:
+    root_logger = logging.getLogger()
+    if root_logger.handlers:
         return
-    logger.setLevel(logging.INFO)
+
+    root_logger.setLevel(logging.INFO)
+
     fmt = logging.Formatter("%(asctime)s %(message)s", datefmt="%H:%M")
-    stream = logging.StreamHandler(sys.stdout)
-    stream.setFormatter(fmt)
-    logger.addHandler(stream)
+
+    error_handler = logging.StreamHandler(sys.stderr)
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(fmt)
+    root_logger.addHandler(error_handler)
+
     if name:
         os.makedirs("logs", exist_ok=True)
         file_handler = logging.FileHandler(
             os.path.join("logs", f"{name}.log"), encoding="utf-8"
         )
         file_handler.setFormatter(fmt)
-        logger.addHandler(file_handler)
+        file_handler.setLevel(logging.INFO)
+        root_logger.addHandler(file_handler)
+
+    print_logger = logging.getLogger("print")
+    print_logger.setLevel(logging.INFO)
+    info_handler = logging.StreamHandler(sys.stdout)
+    info_handler.setFormatter(fmt)
+    print_logger.addHandler(info_handler)
 
 
 setup_logging(instance)
 
 def log_print(*args, sep=" ", end="\n", **kwargs):
-    logging.getLogger().info(sep.join(str(a) for a in args))
+    logging.getLogger("print").info(sep.join(str(a) for a in args))
 
 
 print = log_print
