@@ -2,11 +2,14 @@ import os
 import json
 import asyncio
 import base64
+from io import BytesIO
 from pyrogram import Client
 from pyrogram.types import Message
 from ai_client import AIClient
 from pyrogram.enums import ChatAction
 from prompt_utils import enhance_system_prompt
+from pdf2image import convert_from_bytes
+from docx import Document
 
 SYSTEM_PROMPTS_DIR = "prompts"
 SYSTEM_DIR = "system"
@@ -15,6 +18,9 @@ if not INSTANCE_NAME:
     raise ValueError("INSTANCE_NAME not set")
 with open(os.path.join(SYSTEM_DIR, f"{INSTANCE_NAME}.txt"), "r", encoding="utf-8") as f:
     GENERAL_SYSTEM_PROMPT = f.read().strip()
+
+CACHE_DIR = os.path.join("data", INSTANCE_NAME, "cache")
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 def get_system_prompt(user_id: int, user_name: str) -> str:
     path = os.path.join(SYSTEM_PROMPTS_DIR, INSTANCE_NAME, f"{user_id}.txt")
@@ -52,20 +58,51 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
     elif msg.document and msg.document.mime_type:
         mime_type = msg.document.mime_type
         print(f"ℹ️ Got document with mime type {mime_type}")
-        if mime_type.startswith("image/") and mime_type.endswith(('jpg', 'jpeg', 'gif', 'png', 'webp', 'avif')):
+        fname = msg.document.file_name or ""
+        if mime_type.startswith("image/") and fname.lower().endswith(("jpg", "jpeg", "gif", "png", "webp", "avif")):
             media = await client.download_media(msg, in_memory=True)
-        #elif mime_type == "application/pdf" or msg.document.file_name.lower().endswith(".pdf"):
-        # media = await client.download_media(msg, in_memory=True)
-        #elif mime_type.startswith("application/vnd.openxmlformats") or msg.document.file_name.lower().endswith(('.docx', '.doc', '.xlsx')):
-        # media = await client.download_media(msg, in_memory=True)
-        elif mime_type.startswith("text/") or msg.document.file_name.lower().endswith(('.txt', '.md', '.log')):
+        elif mime_type == "application/pdf" or fname.lower().endswith(".pdf"):
+            uid = msg.document.file_unique_id or msg.document.file_id
+            doc_dir = os.path.join(CACHE_DIR, uid)
+            os.makedirs(doc_dir, exist_ok=True)
+            image_files = sorted([f for f in os.listdir(doc_dir) if f.endswith(".jpg")])
+            if not image_files:
+                print("ℹ️ Converting PDF to images")
+                pdf_bytes = await client.download_media(msg, in_memory=True)
+                pages = convert_from_bytes(pdf_bytes.getvalue())
+                for i, page in enumerate(pages):
+                    out_path = os.path.join(doc_dir, f"page_{i+1}.jpg")
+                    page.save(out_path, "JPEG")
+                    print(f"✅ Saved PDF page {i+1} to {out_path}")
+                    image_files.append(f"page_{i+1}.jpg")
+            for img in image_files:
+                with open(os.path.join(doc_dir, img), "rb") as f:
+                    encoded = base64.b64encode(f.read()).decode()
+                parts.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded}"}, "document": True})
+        elif mime_type.startswith("application/vnd.openxmlformats") or fname.lower().endswith(".docx"):
+            uid = msg.document.file_unique_id or msg.document.file_id
+            out_path = os.path.join(CACHE_DIR, f"{uid}.txt")
+            if not os.path.exists(out_path):
+                print("ℹ️ Extracting text from DOCX file")
+                doc_bytes = await client.download_media(msg, in_memory=True)
+                doc = Document(BytesIO(doc_bytes.getvalue()))
+                text_content = "\n".join(p.text for p in doc.paragraphs)
+                with open(out_path, "w", encoding="utf-8") as f:
+                    f.write(text_content)
+                print(f"✅ Saved DOCX text to {out_path}")
+            else:
+                print(f"ℹ️ Loading cached DOCX text from {out_path}")
+                with open(out_path, "r", encoding="utf-8") as f:
+                    text_content = f.read()
+            if text_content:
+                parts.append({"type": "text", "text": text_content, "document": True})
+        elif mime_type.startswith("text/") or fname.lower().endswith((".txt", ".md", ".log")):
             text_bytes = await client.download_media(msg, in_memory=True)
             try:
                 text_content = text_bytes.getvalue().decode("utf-8")
             except UnicodeDecodeError:
                 text_content = text_bytes.getvalue().decode("latin-1")
             parts.append({"type": "text", "text": text_content})
-
     if media:
         encoded = base64.b64encode(media.getvalue()).decode()
         parts.append({"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}})
@@ -77,17 +114,26 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
 
 def keep_last_image_only(messages):
     last_index = None
-    last_image = None
     for i, msg in enumerate(messages):
         for part in msg["content"]:
-            if part.get("type") == "image_url":
+            if part.get("type") == "image_url" or part.get("document"):
                 last_index = i
-                last_image = part
     if last_index is None:
         return messages
-    for msg in messages:
-        msg["content"] = [p for p in msg["content"] if p.get("type") != "image_url"]
-    messages[last_index]["content"].append(last_image)
+
+    doc_parts = []
+    for i, msg in enumerate(messages):
+        new_content = []
+        for part in msg["content"]:
+            is_doc = part.get("type") == "image_url" or part.get("document")
+            if is_doc:
+                if i == last_index:
+                    doc_parts.append(part)
+            else:
+                new_content.append(part)
+        msg["content"] = new_content
+
+    messages[last_index]["content"].extend(doc_parts)
     return messages
 
 def merge_text_parts(messages):

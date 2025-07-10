@@ -5,7 +5,7 @@ VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/). 
 ## Features
 
 * Works only in private chats.
-* Supports text, images and voice messages. Audio is transcribed with Whisper and text files are also read.
+* Supports text, images, PDF and DOCX documents and voice messages. Audio is transcribed with Whisper and text files are also read. PDF files are converted to images and DOCX files are converted to text.
 * Adds current date, time and optional weather information to the system prompt.
 * Messages from the same user are queued before being sent to the LLM.
 * System prompts can be customised per user by placing a file in `prompts/<instance>/<user_id>.txt`.
