@@ -4,6 +4,7 @@ import asyncio
 import logging
 import builtins
 from dotenv import load_dotenv
+from prompt_utils import update_weather
 
 if len(sys.argv) != 2:
     print("Usage: python app.py <instance>")
@@ -60,13 +61,13 @@ env_file = f".env.{instance}"
 print(f"ℹ️ Loading instance: {instance}")
 load_dotenv(env_file)
 os.environ["INSTANCE_NAME"] = instance
+update_weather()
 
 from pyrogram import Client, filters
 from pyrogram.types import Message
 from pyrogram.enums import ChatAction
 from ai_client import AIClient
 from bot_utils import process_waiting_messages
-
 app = Client(
     name=os.getenv("APP_NAME"),
     api_id=int(os.getenv("API_ID")),
