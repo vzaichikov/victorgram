@@ -28,27 +28,28 @@ VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/). 
 
 ## Environment variables
 
-| Variable | Description |
-| --- | --- |
-| `APP_NAME` | Pyrogram session name |
-| `API_ID` | Telegram API ID |
-| `API_HASH` | Telegram API hash |
+| Variable | Description                                           |
+| --- |-------------------------------------------------------|
+| `APP_NAME` | Pyrogram session name                                 |
+| `API_ID` | Telegram API ID                                       |
+| `API_HASH` | Telegram API hash                                     |
 | `HISTORY_LIMIT` | Number of previous messages to include in the request |
-| `OPENAI_API_KEY` | Key for the OpenAI API |
-| `OPENAI_API_BASE_URL` | Base URL for OpenAI API |
-| `OPENAI_MODEL` | OpenAI model name |
-| `OLLAMA_API_KEY` | Key for Ollama server (optional) |
-| `OLLAMA_API_BASE_URL` | Base URL for Ollama server |
-| `OLLAMA_API_MODEL` | Ollama model name |
-| `USE_OLLAMA` | Set to `true` to use Ollama instead of OpenAI |
-| `OPENWEATHER_API_KEY` | Key for OpenWeather |
-| `WEATHER_LAT` / `WEATHER_LON` | Coordinates for weather updates |
-| `AI_MAX_TOKENS` | Maximum tokens for the model response |
-| `AI_TEMPERATURE` | Temperature parameter for the model |
-| `NEXT_MESSAGE_WAIT_TIME` | Seconds to wait for more messages before replying |
-| `MY_USER_NAME` | Your name used by `prompt_generator.py` |
-| `WHISPER_DEVICE` | Device for Whisper (`cpu` or `cuda`) |
-| `WHISPER_MODEL` | Whisper model name |
-| `MODEL_UNLOAD_TIMEOUT` | Seconds of inactivity before models are unloaded |
+| `OPENAI_API_KEY` | Key for the OpenAI API                                |
+| `OPENAI_API_BASE_URL` | Base URL for OpenAI API                               |
+| `OPENAI_MODEL` | OpenAI model name                                     |
+| `OLLAMA_API_KEY` | Key for Ollama server (optional)                      |
+| `OLLAMA_API_BASE_URL` | Base URL for Ollama server                            |
+| `OLLAMA_API_MODEL` | Ollama model name                                     |
+| `USE_OLLAMA` | Set to `true` to use Ollama instead of OpenAI         |
+| `OPENWEATHER_API_KEY` | Key for OpenWeather                                   |
+| `WEATHER_LAT` / `WEATHER_LON` | Coordinates for weather updates                       |
+| `AI_MAX_TOKENS` | Maximum tokens for the model response                 |
+| `AI_TEMPERATURE` | Temperature parameter for the model                   |
+| `AI_TOP_P` | Top_p parameter for the model                         |
+| `NEXT_MESSAGE_WAIT_TIME` | Seconds to wait for more messages before replying     |
+| `MY_USER_NAME` | Your name used by `prompt_generator.py`               |
+| `WHISPER_DEVICE` | Device for Whisper (`cpu` or `cuda`)                  |
+| `WHISPER_MODEL` | Whisper model name                                    |
+| `MODEL_UNLOAD_TIMEOUT` | Seconds of inactivity before models are unloaded      |
 
 Logs are saved in the `logs/` directory with one file per instance.  The main entry point is `app.py` and helper functions are located in `bot_utils.py`.

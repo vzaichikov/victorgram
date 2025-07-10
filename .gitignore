@@ -8,5 +8,5 @@ __pycache__
 prompts/*
 system/*
 !system/example.txt
-logs/
-data/
+logs/*
+data/*

@@ -9,6 +9,7 @@ try:
 except Exception:
     whisper = None
 
+
 class AIClient:
     def __init__(self, api_type=None):
         if api_type is None:
@@ -94,24 +95,28 @@ class AIClient:
 
         return result.get("text", "").strip()
 
-    def complete(self, messages, max_tokens=None, temperature=None):
+    def complete(self, messages, max_tokens=None, temperature=None, top_p=None):
         self._maybe_unload_models()
 
         if max_tokens is None:
-            env_val = os.getenv("AI_MAX_TOKENS")
+            env_val = os.getenv("AI_MAX_TOKENS", 512)
             if env_val is not None:
                 max_tokens = int(env_val)
         if temperature is None:
-            env_val = os.getenv("AI_TEMPERATURE")
+            env_val = os.getenv("AI_TEMPERATURE", 0.8)
             if env_val is not None:
                 temperature = float(env_val)
+        if top_p is None:
+            env_val = os.getenv("AI_TOP_P", 0.9)
+            if env_val is not None:
+                top_p = float(env_val)
 
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
+            top_p=top_p
         )
         self.last_used_time = time.time()
         return response.choices[0].message.content.strip()
-
