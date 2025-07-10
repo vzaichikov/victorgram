@@ -1,12 +1,17 @@
 # VictorGram
 
-VictorGram is a small Telegram bot that uses [Pyrogram](https://docs.pyrogram.org/) and OpenAI's API.  Messages from users are forwarded to the language model and the reply is sent back to the chat.
+VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/).  It forwards user messages to an LLM (OpenAI or Ollama) and sends the reply back to the chat.
 
 ## Features
 
-* Private chat only.
-* Supports text and image messages.
+* Works only in private chats.
+* Supports text, images and voice messages. Audio is transcribed with Whisper and text files are also read.
+* Adds current date, time and optional weather information to the system prompt.
+* Messages from the same user are queued before being sent to the LLM.
 * System prompts can be customised per user by placing a file in `prompts/<instance>/<user_id>.txt`.
+* Can use OpenAI or local Ollama models and unloads models after a period of inactivity.
+* A Streamlit UI (`ui.py`) allows starting and stopping instances.
+* `prompt_generator.py` can create personal system prompts from chat history.
 
 ## Setup
 
@@ -14,28 +19,36 @@ VictorGram is a small Telegram bot that uses [Pyrogram](https://docs.pyrogram.or
    ```bash
    pip install -r requirements.txt
    ```
-2. Create an environment file for each instance (for example `.env.example`) with the following variables:
-   - `APP_NAME` – Pyrogram session name
-   - `API_ID` and `API_HASH` – values from [my.telegram.org](https://my.telegram.org)
-   - `OPENAI_API_KEY` – key for OpenAI or configure OLLAMA variables
-   - `OPENWEATHER_API_KEY` – key for OpenWeather
-   - `WEATHER_LAT` and `WEATHER_LON` – coordinates for your location
-   - `MODEL_UNLOAD_TIMEOUT` – seconds to keep models loaded (default 1800)
+2. Create an environment file for each instance (for example `.env.example`) and set the variables below.
 3. Put a system prompt for that instance into `system/<instance>.txt` (an example file `system/example.txt` is provided).
 4. Run the bot (for example to start the `example` instance):
-  ```bash
- python app.py example
-  ```
+   ```bash
+   python app.py example
+   ```
 
-## Streamlit manager
+## Environment variables
 
-To manage instances via a web UI run:
+| Variable | Description |
+| --- | --- |
+| `APP_NAME` | Pyrogram session name |
+| `API_ID` | Telegram API ID |
+| `API_HASH` | Telegram API hash |
+| `HISTORY_LIMIT` | Number of previous messages to include in the request |
+| `OPENAI_API_KEY` | Key for the OpenAI API |
+| `OPENAI_API_BASE_URL` | Base URL for OpenAI API |
+| `OPENAI_MODEL` | OpenAI model name |
+| `OLLAMA_API_KEY` | Key for Ollama server (optional) |
+| `OLLAMA_API_BASE_URL` | Base URL for Ollama server |
+| `OLLAMA_API_MODEL` | Ollama model name |
+| `USE_OLLAMA` | Set to `true` to use Ollama instead of OpenAI |
+| `OPENWEATHER_API_KEY` | Key for OpenWeather |
+| `WEATHER_LAT` / `WEATHER_LON` | Coordinates for weather updates |
+| `AI_MAX_TOKENS` | Maximum tokens for the model response |
+| `AI_TEMPERATURE` | Temperature parameter for the model |
+| `NEXT_MESSAGE_WAIT_TIME` | Seconds to wait for more messages before replying |
+| `MY_USER_NAME` | Your name used by `prompt_generator.py` |
+| `WHISPER_DEVICE` | Device for Whisper (`cpu` or `cuda`) |
+| `WHISPER_MODEL` | Whisper model name |
+| `MODEL_UNLOAD_TIMEOUT` | Seconds of inactivity before models are unloaded |
 
-```bash
-streamlit run ui.py
-```
-
-Logs are saved in the `logs/` directory with one file per instance.
-
-The main entry point is `app.py` and helper functions are located in `bot_utils.py`.
-
+Logs are saved in the `logs/` directory with one file per instance.  The main entry point is `app.py` and helper functions are located in `bot_utils.py`.
