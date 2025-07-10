@@ -67,27 +67,17 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
             os.makedirs(doc_dir, exist_ok=True)
             image_files = sorted([f for f in os.listdir(doc_dir) if f.endswith(".jpg")])
             if not image_files:
-                print("ℹ️ Converting PDF to images")
+                print("ℹ️ Converting PDF to images with PyMuPDF")
                 pdf_bytes = await client.download_media(msg, in_memory=True)
-                try:
-                    from pdf2image import convert_from_bytes
-                    pages = convert_from_bytes(pdf_bytes.getvalue())
-                    for i, page in enumerate(pages):
+                pdf_bytes = pdf_bytes.getvalue()
+                with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                    for i, page in enumerate(doc):
+                        pix = page.get_pixmap()
                         out_path = os.path.join(doc_dir, f"page_{i+1}.jpg")
-                        page.save(out_path, "JPEG")
+                        with open(out_path, "wb") as f:
+                            f.write(pix.tobytes("jpg"))
                         print(f"✅ Saved PDF page {i+1} to {out_path}")
                         image_files.append(f"page_{i+1}.jpg")
-                except Exception as e:
-                    print(f"⛔ pdf2image failed: {e}\nℹ️ Falling back to PyMuPDF")
-                    pdf_bytes = pdf_bytes.getvalue()
-                    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-                        for i, page in enumerate(doc):
-                            pix = page.get_pixmap()
-                            out_path = os.path.join(doc_dir, f"page_{i+1}.jpg")
-                            with open(out_path, "wb") as f:
-                                f.write(pix.tobytes("jpg"))
-                            print(f"✅ Saved PDF page {i+1} to {out_path}")
-                            image_files.append(f"page_{i+1}.jpg")
             for img in image_files:
                 with open(os.path.join(doc_dir, img), "rb") as f:
                     encoded = base64.b64encode(f.read()).decode()
@@ -208,11 +198,6 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
     system_prompt = enhance_system_prompt(get_system_prompt(user_id, user_name))
     print(f"🤖 Processing {len(msgs)} messages from {user_id}")
     try:
-        history = []
-        limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
-        async for m in client.get_chat_history(user_id, limit=limit):
-            history.append(m)
-
         history = []
         limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
         async for m in client.get_chat_history(user_id, limit=limit):

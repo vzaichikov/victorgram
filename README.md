@@ -19,7 +19,7 @@ VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/). 
    ```bash
    pip install -r requirements.txt
    ```
-   PDF conversion tries `pdf2image` with poppler and falls back to PyMuPDF if poppler is missing.
+   PDF conversion uses PyMuPDF, so no additional tools like poppler are required.
 2. Create an environment file for each instance (for example `.env.example`) and set the variables below.
 3. Put a system prompt for that instance into `system/<instance>.txt` (an example file `system/example.txt` is provided).
 4. Run the bot (for example to start the `example` instance):
