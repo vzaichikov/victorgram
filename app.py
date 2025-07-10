@@ -86,9 +86,8 @@ async def handle_message(client: Client, message: Message):
 
     username = message.from_user.username
     if username and username.lower().endswith("_bot"):
-        if username != 'vidzone_test_bot':
-            print(f"Skipping bot user: {username}")
-            return
+        print(f"Skipping bot user: {username}")
+        return
 
     if int(user_id) < 0:
         print(f"Skipping group/channel: {user_id}")
