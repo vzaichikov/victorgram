@@ -9,3 +9,4 @@ prompts/*
 system/*
 !system/example.txt
 logs/
+data/

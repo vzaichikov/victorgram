@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 import os
 import time
@@ -8,7 +9,8 @@ current_weather = ""
 
 
 def update_weather() -> None:
-    """Fetch current weather and save it to a file."""
+    print(f"ℹ️ Weather update started")
+
     global current_weather
     lat = os.getenv("WEATHER_LAT")
     lon = os.getenv("WEATHER_LON")
@@ -28,18 +30,22 @@ def update_weather() -> None:
 
     try:
         url = (
-            "https://api.openweathermap.org/data/3.0/onecall"
+            "https://api.openweathermap.org/data/2.5/weather"
             f"?lat={lat}&lon={lon}"
-            "&exclude=minutely,hourly,daily,alerts"
             "&units=metric&lang=en"
             f"&appid={api_key}"
         )
+
         resp = requests.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
-        temp = data["current"]["temp"]
-        desc = data["current"]["weather"][0]["description"]
+
+        temp = data["main"]["temp"]
+        desc = data["weather"][0]["description"]
         current_weather = f"{temp}°C, {desc}"
+
+        print(f"ℹ️ Got weather from API: {current_weather}")
+
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             f.write(current_weather)
@@ -49,7 +55,6 @@ def update_weather() -> None:
 
 
 def enhance_system_prompt(prompt: str) -> str:
-    """Append current date and time information to the system prompt."""
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M")
@@ -66,6 +71,6 @@ def enhance_system_prompt(prompt: str) -> str:
         f"{prompt}\nIf your answer is related to daytime, use this info Current date: {date_str}. Current time: {time_str}. It's {period}."
     )
     if current_weather:
-        result += f" Current weather: {current_weather}."
+        result += f"\nIf your answer is related to weather, use this info Current weather: {current_weather}."
     return result
 
