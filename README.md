@@ -18,6 +18,8 @@ VictorGram is a small Telegram bot that uses [Pyrogram](https://docs.pyrogram.or
    - `APP_NAME` – Pyrogram session name
    - `API_ID` and `API_HASH` – values from [my.telegram.org](https://my.telegram.org)
    - `OPENAI_API_KEY` – key for OpenAI or configure OLLAMA variables
+   - `OPENWEATHER_API_KEY` – key for OpenWeather
+   - `WEATHER_LAT` and `WEATHER_LON` – coordinates for your location
    - `MODEL_UNLOAD_TIMEOUT` – seconds to keep models loaded (default 1800)
 3. Put a system prompt for that instance into `system/<instance>.txt` (an example file `system/example.txt` is provided).
 4. Run the bot (for example to start the `example` instance):
