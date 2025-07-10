@@ -8,8 +8,8 @@ from pyrogram.types import Message
 from ai_client import AIClient
 from pyrogram.enums import ChatAction
 from prompt_utils import enhance_system_prompt
-from pdf2image import convert_from_bytes
 from docx import Document
+import fitz
 
 SYSTEM_PROMPTS_DIR = "prompts"
 SYSTEM_DIR = "system"
@@ -69,12 +69,25 @@ async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
             if not image_files:
                 print("ℹ️ Converting PDF to images")
                 pdf_bytes = await client.download_media(msg, in_memory=True)
-                pages = convert_from_bytes(pdf_bytes.getvalue())
-                for i, page in enumerate(pages):
-                    out_path = os.path.join(doc_dir, f"page_{i+1}.jpg")
-                    page.save(out_path, "JPEG")
-                    print(f"✅ Saved PDF page {i+1} to {out_path}")
-                    image_files.append(f"page_{i+1}.jpg")
+                try:
+                    from pdf2image import convert_from_bytes
+                    pages = convert_from_bytes(pdf_bytes.getvalue())
+                    for i, page in enumerate(pages):
+                        out_path = os.path.join(doc_dir, f"page_{i+1}.jpg")
+                        page.save(out_path, "JPEG")
+                        print(f"✅ Saved PDF page {i+1} to {out_path}")
+                        image_files.append(f"page_{i+1}.jpg")
+                except Exception as e:
+                    print(f"⛔ pdf2image failed: {e}\nℹ️ Falling back to PyMuPDF")
+                    pdf_bytes = pdf_bytes.getvalue()
+                    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                        for i, page in enumerate(doc):
+                            pix = page.get_pixmap()
+                            out_path = os.path.join(doc_dir, f"page_{i+1}.jpg")
+                            with open(out_path, "wb") as f:
+                                f.write(pix.tobytes("jpg"))
+                            print(f"✅ Saved PDF page {i+1} to {out_path}")
+                            image_files.append(f"page_{i+1}.jpg")
             for img in image_files:
                 with open(os.path.join(doc_dir, img), "rb") as f:
                     encoded = base64.b64encode(f.read()).decode()
