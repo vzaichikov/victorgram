@@ -136,9 +136,12 @@ async def handle_message(client: Client, message: Message):
 @app.on_message(filters.group & filters.incoming)
 async def handle_group_message(client: Client, message: Message):
     chat_id = message.chat.id
+    chat_name = message.chat.title
     if chat_id not in included_groups:
+        print(f"Skipping not included group: {chat_id}: {chat_name}")
         return
     if not message.from_user:
+        print(f"Skipping not user message in group: {chat_id}")
         return
 
     username = message.from_user.username
