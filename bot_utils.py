@@ -200,10 +200,17 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     return messages
 
 
-async def send_typing_loop(client: Client, chat_id: int, stop_event: asyncio.Event):
+async def send_typing_loop(
+    client: Client,
+    chat_id: int,
+    stop_event: asyncio.Event,
+    thread_id: int | None = None,
+):
     while not stop_event.is_set():
         try:
-            await client.send_chat_action(chat_id, ChatAction.TYPING)
+            await client.send_chat_action(
+                chat_id, ChatAction.TYPING, message_thread_id=thread_id
+            )
         except Exception as e:
             print(f"⛔ Typing notification error for {chat_id}: {e}")
         await asyncio.sleep(random.uniform(2, 3))
@@ -216,16 +223,21 @@ async def process_waiting_messages(
     ai_client,
     delay: int | None = None,
     reply_targets: dict | None = None,
+    *,
+    key=None,
+    thread_id: int | None = None,
 ):
+    if key is None:
+        key = chat_id
     print(f"🤖 Processing waiting messages for {chat_id}")
     if delay is None:
         delay = int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10))
     await asyncio.sleep(delay)
     async with waiting_lock:
-        msgs = waiting_dict.pop(chat_id, [])
+        msgs = waiting_dict.pop(key, [])
         reply_to = None
         if reply_targets is not None:
-            reply_to = reply_targets.pop(chat_id, None)
+            reply_to = reply_targets.pop(key, None)
     if not msgs:
         return
     if chat_id < 0:
@@ -241,7 +253,7 @@ async def process_waiting_messages(
     try:
         history = []
         limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
-        async for m in client.get_chat_history(chat_id, limit=limit):
+        async for m in client.get_chat_history(chat_id, limit=limit, thread_id=thread_id):
             history.append(m)
 
         for m in reversed(msgs):
@@ -251,9 +263,11 @@ async def process_waiting_messages(
         prev_msgs = list(reversed(history[:limit]))
         openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt, ai_client)
         print("🤖 Sending message to AI, with typing notification")
-        await client.send_chat_action(chat_id, ChatAction.TYPING)
+        await client.send_chat_action(chat_id, ChatAction.TYPING, message_thread_id=thread_id)
         stop_event = asyncio.Event()
-        typing_task = asyncio.create_task(send_typing_loop(client, chat_id, stop_event))
+        typing_task = asyncio.create_task(
+            send_typing_loop(client, chat_id, stop_event, thread_id=thread_id)
+        )
         reply = await asyncio.to_thread(ai_client.complete, openai_messages)
         stop_event.set()
         await typing_task
@@ -262,7 +276,9 @@ async def process_waiting_messages(
         if reply_to is not None:
             await reply_to.reply_text(reply)
         else:
-            await client.send_message(chat_id, reply)
+            await client.send_message(
+                chat_id, reply, message_thread_id=thread_id
+            )
     except ValueError as e:
         print(f"⛔ Error for chat {chat_id}: {e}")
     except KeyError as e:
@@ -270,5 +286,7 @@ async def process_waiting_messages(
     except Exception as e:
         print(f"⛔ Unexpected error for chat {chat_id}: {e}")
     finally:
-        await client.send_chat_action(chat_id, ChatAction.CANCEL)
+        await client.send_chat_action(
+            chat_id, ChatAction.CANCEL, message_thread_id=thread_id
+        )
 

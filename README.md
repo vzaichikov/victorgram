@@ -10,6 +10,7 @@ VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/). 
 * Messages from the same user are queued before being sent to the LLM.
 * System prompts can be customised per user by placing a file in `prompts/<instance>/<user_id>.txt`.
 * System prompts can be customised per group by placing a file in `prompts/<instance>/groups/<group_id>.txt`.
+* Replies in the same group topic or channel where the bot was triggered.
 * Can use OpenAI or local Ollama models and unloads models after a period of inactivity.
 * A Streamlit UI (`ui.py`) allows starting and stopping instances.
 * `prompt_generator.py` can create personal system prompts from chat history and update user and group names.
