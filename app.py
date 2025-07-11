@@ -94,6 +94,7 @@ included_groups = load_id_list(os.path.join("data", instance, "included.txt"))
 
 waiting_users = {}
 waiting_groups = {}
+group_reply_targets = {}
 waiting_lock = asyncio.Lock()
 
 
@@ -166,6 +167,7 @@ async def handle_group_message(client: Client, message: Message):
         if chat_id in waiting_groups:
             waiting_groups[chat_id].append(message)
             if mentioned:
+                group_reply_targets[chat_id] = message
                 await client.send_chat_action(chat_id, ChatAction.TYPING)
                 asyncio.create_task(
                     process_waiting_messages(
@@ -175,10 +177,12 @@ async def handle_group_message(client: Client, message: Message):
                         waiting_lock,
                         ai_client,
                         delay=0,
+                        reply_targets=group_reply_targets,
                     )
                 )
             return
         waiting_groups[chat_id] = [message]
+        group_reply_targets[chat_id] = message if mentioned else None
         await client.send_chat_action(chat_id, ChatAction.TYPING)
         asyncio.create_task(
             process_waiting_messages(
@@ -188,6 +192,7 @@ async def handle_group_message(client: Client, message: Message):
                 waiting_lock,
                 ai_client,
                 delay=delay,
+                reply_targets=group_reply_targets,
             )
         )
 

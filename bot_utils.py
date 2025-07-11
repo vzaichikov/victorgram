@@ -194,6 +194,7 @@ async def process_waiting_messages(
     waiting_lock,
     ai_client,
     delay: int | None = None,
+    reply_targets: dict | None = None,
 ):
     print(f"🤖 Processing waiting messages for {chat_id}")
     if delay is None:
@@ -201,6 +202,9 @@ async def process_waiting_messages(
     await asyncio.sleep(delay)
     async with waiting_lock:
         msgs = waiting_dict.pop(chat_id, [])
+        reply_to = None
+        if reply_targets is not None:
+            reply_to = reply_targets.pop(chat_id, None)
     if not msgs:
         return
     user_name = (
@@ -227,7 +231,10 @@ async def process_waiting_messages(
         reply = ai_client.complete(openai_messages)
         print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
 
-        await msgs[-1].reply_text(reply)
+        if reply_to is not None:
+            await reply_to.reply_text(reply)
+        else:
+            await client.send_message(chat_id, reply)
     except ValueError as e:
         print(f"⛔ Error for chat {chat_id}: {e}")
     except KeyError as e:
