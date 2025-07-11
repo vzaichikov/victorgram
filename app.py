@@ -170,9 +170,7 @@ async def handle_group_message(client: Client, message: Message):
             waiting_groups[key].append(message)
             if mentioned:
                 group_reply_targets[key] = message
-                await client.send_chat_action(
-                    chat_id, ChatAction.TYPING, message_thread_id=thread_id
-                )
+                await client.send_chat_action(chat_id, ChatAction.TYPING)
                 asyncio.create_task(
                     process_waiting_messages(
                         client,
@@ -189,9 +187,7 @@ async def handle_group_message(client: Client, message: Message):
             return
         waiting_groups[key] = [message]
         group_reply_targets[key] = message if mentioned else None
-        await client.send_chat_action(
-            chat_id, ChatAction.TYPING, message_thread_id=thread_id
-        )
+        await client.send_chat_action(chat_id, ChatAction.TYPING)
         asyncio.create_task(
             process_waiting_messages(
                 client,
