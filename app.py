@@ -138,7 +138,6 @@ async def handle_message(client: Client, message: Message):
 async def handle_group_message(client: Client, message: Message):
     chat_id = message.chat.id
     chat_name = message.chat.title
-    thread_id = message.message_thread_id or 0
     if chat_id not in included_groups:
         print(f"Skipping not included group: {chat_id}: {chat_name}")
         return
@@ -164,12 +163,11 @@ async def handle_group_message(client: Client, message: Message):
     )
 
     delay = 0 if mentioned else int(os.getenv("GROUP_MESSAGE_WAIT_TIME", 60))
-    key = (chat_id, thread_id)
     async with waiting_lock:
-        if key in waiting_groups:
-            waiting_groups[key].append(message)
+        if chat_id in waiting_groups:
+            waiting_groups[chat_id].append(message)
             if mentioned:
-                group_reply_targets[key] = message
+                group_reply_targets[chat_id] = message
                 await client.send_chat_action(chat_id, ChatAction.TYPING)
                 asyncio.create_task(
                     process_waiting_messages(
@@ -180,13 +178,11 @@ async def handle_group_message(client: Client, message: Message):
                         ai_client,
                         delay=0,
                         reply_targets=group_reply_targets,
-                        key=key,
-                        thread_id=thread_id,
                     )
                 )
             return
-        waiting_groups[key] = [message]
-        group_reply_targets[key] = message if mentioned else None
+        waiting_groups[chat_id] = [message]
+        group_reply_targets[chat_id] = message if mentioned else None
         await client.send_chat_action(chat_id, ChatAction.TYPING)
         asyncio.create_task(
             process_waiting_messages(
@@ -197,8 +193,6 @@ async def handle_group_message(client: Client, message: Message):
                 ai_client,
                 delay=delay,
                 reply_targets=group_reply_targets,
-                key=key,
-                thread_id=thread_id,
             )
         )
 
