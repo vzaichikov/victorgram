@@ -68,6 +68,19 @@ from pyrogram.types import Message
 from pyrogram.enums import ChatAction
 from ai_client import AIClient
 from bot_utils import process_waiting_messages
+
+
+def load_id_list(path: str) -> set[int]:
+    ids: set[int] = set()
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and line.lstrip("-").isdigit():
+                    ids.add(int(line))
+    except FileNotFoundError:
+        pass
+    return ids
 app = Client(
     name=os.getenv("APP_NAME"),
     api_id=int(os.getenv("API_ID")),
@@ -76,13 +89,21 @@ app = Client(
 
 ai_client = AIClient()
 
+excluded_users = load_id_list(os.path.join("data", instance, "excluded.txt"))
+included_groups = load_id_list(os.path.join("data", instance, "included.txt"))
+
 waiting_users = {}
+waiting_groups = {}
 waiting_lock = asyncio.Lock()
 
 
 @app.on_message(filters.private & filters.incoming)
 async def handle_message(client: Client, message: Message):
     user_id = message.from_user.id
+
+    if user_id in excluded_users:
+        print(f"Skipping excluded user: {user_id}")
+        return
 
     username = message.from_user.username
     if username and username.lower().endswith("_bot"):
@@ -109,6 +130,62 @@ async def handle_message(client: Client, message: Message):
         await client.send_chat_action(user_id, ChatAction.TYPING)
         asyncio.create_task(
             process_waiting_messages(client, user_id, waiting_users, waiting_lock, ai_client)
+        )
+
+
+@app.on_message(filters.group & filters.incoming)
+async def handle_group_message(client: Client, message: Message):
+    chat_id = message.chat.id
+    if chat_id not in included_groups:
+        return
+    if not message.from_user:
+        return
+
+    username = message.from_user.username
+    if username and username.lower().endswith("_bot"):
+        print(f"Skipping bot user in group: {username}")
+        return
+
+    text = message.text or message.caption or ""
+    bot_username = client.me.username if client.me else ""
+    mentioned = False
+    if bot_username and f"@{bot_username.lower()}" in text.lower():
+        mentioned = True
+    if message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.id == client.me.id:
+        mentioned = True
+
+    print(
+        f"🤖 Got group message in {chat_id} from {message.from_user.first_name} ({message.from_user.id}): {text or 'Non-text message'}"
+    )
+
+    delay = 0 if mentioned else int(os.getenv("GROUP_MESSAGE_WAIT_TIME", 60))
+    async with waiting_lock:
+        if chat_id in waiting_groups:
+            waiting_groups[chat_id].append(message)
+            if mentioned:
+                await client.send_chat_action(chat_id, ChatAction.TYPING)
+                asyncio.create_task(
+                    process_waiting_messages(
+                        client,
+                        chat_id,
+                        waiting_groups,
+                        waiting_lock,
+                        ai_client,
+                        delay=0,
+                    )
+                )
+            return
+        waiting_groups[chat_id] = [message]
+        await client.send_chat_action(chat_id, ChatAction.TYPING)
+        asyncio.create_task(
+            process_waiting_messages(
+                client,
+                chat_id,
+                waiting_groups,
+                waiting_lock,
+                ai_client,
+                delay=delay,
+            )
         )
 
 app.run()

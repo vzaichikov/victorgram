@@ -48,6 +48,7 @@ VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/). 
 | `AI_TEMPERATURE` | Temperature parameter for the model                   |
 | `AI_TOP_P` | Top_p parameter for the model                         |
 | `NEXT_MESSAGE_WAIT_TIME` | Seconds to wait for more messages before replying     |
+| `GROUP_MESSAGE_WAIT_TIME` | Seconds to wait before replying in groups           |
 | `MY_USER_NAME` | Your name used by `prompt_generator.py`               |
 | `WHISPER_DEVICE` | Device for Whisper (`cpu` or `cuda`)                  |
 | `WHISPER_MODEL` | Whisper model name                                    |

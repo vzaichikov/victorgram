@@ -10,3 +10,6 @@ system/*
 !system/example.txt
 logs/*
 data/*
+!data/example/
+!data/example/included.txt
+!data/example/excluded.txt

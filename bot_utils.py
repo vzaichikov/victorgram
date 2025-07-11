@@ -187,20 +187,33 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     messages = merge_text_parts(messages)
     return messages
 
-async def process_waiting_messages(client: Client, user_id: int, waiting_users, waiting_lock, ai_client):
-    print(f"🤖 Processing waiting messages for {user_id}")
-    await asyncio.sleep(int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10)))
+async def process_waiting_messages(
+    client: Client,
+    chat_id: int,
+    waiting_dict,
+    waiting_lock,
+    ai_client,
+    delay: int | None = None,
+):
+    print(f"🤖 Processing waiting messages for {chat_id}")
+    if delay is None:
+        delay = int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10))
+    await asyncio.sleep(delay)
     async with waiting_lock:
-        msgs = waiting_users.pop(user_id, [])
+        msgs = waiting_dict.pop(chat_id, [])
     if not msgs:
         return
-    user_name = msgs[-1].from_user.first_name or msgs[-1].from_user.username or str(user_id)
-    system_prompt = enhance_system_prompt(get_system_prompt(user_id, user_name))
-    print(f"🤖 Processing {len(msgs)} messages from {user_id}")
+    user_name = (
+        msgs[-1].from_user.first_name
+        or msgs[-1].from_user.username
+        or str(chat_id)
+    )
+    system_prompt = enhance_system_prompt(get_system_prompt(chat_id, user_name))
+    print(f"🤖 Processing {len(msgs)} messages from {chat_id}")
     try:
         history = []
         limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
-        async for m in client.get_chat_history(user_id, limit=limit):
+        async for m in client.get_chat_history(chat_id, limit=limit):
             history.append(m)
 
         for m in reversed(msgs):
@@ -216,11 +229,11 @@ async def process_waiting_messages(client: Client, user_id: int, waiting_users, 
 
         await msgs[-1].reply_text(reply)
     except ValueError as e:
-        print(f"⛔ Error for chat {user_id}: {e}")
+        print(f"⛔ Error for chat {chat_id}: {e}")
     except KeyError as e:
-        print(f"⛔ Error for chat {user_id}: {e}")
+        print(f"⛔ Error for chat {chat_id}: {e}")
     except Exception as e:
-        print(f"⛔ Unexpected error for chat {user_id}: {e}")
+        print(f"⛔ Unexpected error for chat {chat_id}: {e}")
     finally:
-        await client.send_chat_action(user_id, ChatAction.CANCEL)
+        await client.send_chat_action(chat_id, ChatAction.CANCEL)
 
