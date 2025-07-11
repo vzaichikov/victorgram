@@ -2,6 +2,7 @@ import os
 import json
 import asyncio
 import base64
+import random
 from io import BytesIO
 from pyrogram import Client
 from pyrogram.types import Message
@@ -12,6 +13,7 @@ from docx import Document
 import fitz
 
 SYSTEM_PROMPTS_DIR = "prompts"
+GROUP_PROMPTS_SUBDIR = "groups"
 SYSTEM_DIR = "system"
 INSTANCE_NAME = os.getenv("INSTANCE_NAME")
 if not INSTANCE_NAME:
@@ -22,13 +24,23 @@ with open(os.path.join(SYSTEM_DIR, f"{INSTANCE_NAME}.txt"), "r", encoding="utf-8
 CACHE_DIR = os.path.join("data", INSTANCE_NAME, "cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 
-def get_system_prompt(user_id: int, user_name: str) -> str:
-    path = os.path.join(SYSTEM_PROMPTS_DIR, INSTANCE_NAME, f"{user_id}.txt")
+def get_system_prompt(chat_id: int, name: str) -> str:
+    if chat_id < 0:
+        path = os.path.join(
+            SYSTEM_PROMPTS_DIR, INSTANCE_NAME, GROUP_PROMPTS_SUBDIR, f"{chat_id}.txt"
+        )
+    else:
+        path = os.path.join(SYSTEM_PROMPTS_DIR, INSTANCE_NAME, f"{chat_id}.txt")
+
     if os.path.exists(path):
-        print(f"ℹ️ Using custom system prompt for user {user_id}")
+        print(f"ℹ️ Using custom system prompt for chat {chat_id}")
         with open(path, "r", encoding="utf-8") as f:
             return f.read().strip()
-    return GENERAL_SYSTEM_PROMPT + f"\nThe other person's name is {user_name}."
+
+    if chat_id < 0:
+        return GENERAL_SYSTEM_PROMPT + f"\nThe group's name is {name}."
+
+    return GENERAL_SYSTEM_PROMPT + f"\nThe other person's name is {name}."
 
 async def message_to_content(client: Client, msg: Message, ai_client: AIClient):
     parts = []
@@ -187,6 +199,15 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     messages = merge_text_parts(messages)
     return messages
 
+
+async def send_typing_loop(client: Client, chat_id: int, stop_event: asyncio.Event):
+    while not stop_event.is_set():
+        try:
+            await client.send_chat_action(chat_id, ChatAction.TYPING)
+        except Exception as e:
+            print(f"⛔ Typing notification error for {chat_id}: {e}")
+        await asyncio.sleep(random.uniform(2, 3))
+
 async def process_waiting_messages(
     client: Client,
     chat_id: int,
@@ -207,11 +228,14 @@ async def process_waiting_messages(
             reply_to = reply_targets.pop(chat_id, None)
     if not msgs:
         return
-    user_name = (
-        msgs[-1].from_user.first_name
-        or msgs[-1].from_user.username
-        or str(chat_id)
-    )
+    if chat_id < 0:
+        user_name = msgs[-1].chat.title or str(chat_id)
+    else:
+        user_name = (
+            msgs[-1].from_user.first_name
+            or msgs[-1].from_user.username
+            or str(chat_id)
+        )
     system_prompt = enhance_system_prompt(get_system_prompt(chat_id, user_name))
     print(f"🤖 Processing {len(msgs)} messages from {chat_id}")
     try:
@@ -228,8 +252,11 @@ async def process_waiting_messages(
         openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt, ai_client)
         print("🤖 Sending message to AI, with typing notification")
         await client.send_chat_action(chat_id, ChatAction.TYPING)
-       #print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
-        reply = ai_client.complete(openai_messages)
+        stop_event = asyncio.Event()
+        typing_task = asyncio.create_task(send_typing_loop(client, chat_id, stop_event))
+        reply = await asyncio.to_thread(ai_client.complete, openai_messages)
+        stop_event.set()
+        await typing_task
         print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
 
         if reply_to is not None:

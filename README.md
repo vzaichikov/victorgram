@@ -9,9 +9,10 @@ VictorGram is a Telegram bot powered by [Pyrogram](https://docs.pyrogram.org/). 
 * Adds current date, time and optional weather information to the system prompt.
 * Messages from the same user are queued before being sent to the LLM.
 * System prompts can be customised per user by placing a file in `prompts/<instance>/<user_id>.txt`.
+* System prompts can be customised per group by placing a file in `prompts/<instance>/groups/<group_id>.txt`.
 * Can use OpenAI or local Ollama models and unloads models after a period of inactivity.
 * A Streamlit UI (`ui.py`) allows starting and stopping instances.
-* `prompt_generator.py` can create personal system prompts from chat history.
+* `prompt_generator.py` can create personal system prompts from chat history and update user and group names.
 
 ## Setup
 
