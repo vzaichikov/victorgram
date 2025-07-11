@@ -8,7 +8,6 @@ from pyrogram import Client
 from pyrogram.types import Message
 from ai_client import AIClient
 from pyrogram.enums import ChatAction
-from pyrogram.raw import functions as raw_functions, types as raw_types
 from prompt_utils import enhance_system_prompt
 from docx import Document
 import fitz
@@ -201,26 +200,7 @@ async def build_openai_messages(client: Client, history, new_messages, system_pr
     return messages
 
 
-async def send_topic_message(client: Client, chat_id: int, topic_id: int, text: str):
-    await client.invoke(
-        raw_functions.messages.SendMessage(
-            peer=await client.resolve_peer(chat_id),
-            message=text,
-            random_id=client.rnd_id(),
-            reply_to=raw_types.InputReplyToMessage(
-                top_msg_id=topic_id,
-                reply_to_msg_id=0,
-            ),
-        )
-    )
-
-
-async def send_typing_loop(
-    client: Client,
-    chat_id: int,
-    stop_event: asyncio.Event,
-    thread_id: int | None = None,
-):
+async def send_typing_loop(client: Client, chat_id: int, stop_event: asyncio.Event):
     while not stop_event.is_set():
         try:
             await client.send_chat_action(chat_id, ChatAction.TYPING)
@@ -236,21 +216,16 @@ async def process_waiting_messages(
     ai_client,
     delay: int | None = None,
     reply_targets: dict | None = None,
-    *,
-    key=None,
-    thread_id: int | None = None,
 ):
-    if key is None:
-        key = chat_id
     print(f"🤖 Processing waiting messages for {chat_id}")
     if delay is None:
         delay = int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10))
     await asyncio.sleep(delay)
     async with waiting_lock:
-        msgs = waiting_dict.pop(key, [])
+        msgs = waiting_dict.pop(chat_id, [])
         reply_to = None
         if reply_targets is not None:
-            reply_to = reply_targets.pop(key, None)
+            reply_to = reply_targets.pop(chat_id, None)
     if not msgs:
         return
     if chat_id < 0:
@@ -278,9 +253,7 @@ async def process_waiting_messages(
         print("🤖 Sending message to AI, with typing notification")
         await client.send_chat_action(chat_id, ChatAction.TYPING)
         stop_event = asyncio.Event()
-        typing_task = asyncio.create_task(
-            send_typing_loop(client, chat_id, stop_event, thread_id=thread_id)
-        )
+        typing_task = asyncio.create_task(send_typing_loop(client, chat_id, stop_event))
         reply = await asyncio.to_thread(ai_client.complete, openai_messages)
         stop_event.set()
         await typing_task
@@ -289,10 +262,7 @@ async def process_waiting_messages(
         if reply_to is not None:
             await reply_to.reply_text(reply)
         else:
-            if thread_id:
-                await send_topic_message(client, chat_id, thread_id, reply)
-            else:
-                await client.send_message(chat_id, reply)
+            await client.send_message(chat_id, reply)
     except ValueError as e:
         print(f"⛔ Error for chat {chat_id}: {e}")
     except KeyError as e:
