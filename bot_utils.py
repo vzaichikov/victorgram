@@ -226,7 +226,8 @@ async def process_waiting_messages(
         limit = int(os.getenv("HISTORY_LIMIT")) - 1
         prev_msgs = list(reversed(history[:limit]))
         openai_messages = await build_openai_messages(client, prev_msgs, msgs, system_prompt, ai_client)
-        print("🤖 Sending message to AI api")
+        print("🤖 Sending message to AI, with typing notification")
+        await client.send_chat_action(chat_id, ChatAction.TYPING)
        #print(json.dumps(openai_messages, ensure_ascii=False, indent=4))
         reply = ai_client.complete(openai_messages)
         print(f"🤖 Reply to {msgs[-1].from_user.first_name}: {reply}")
