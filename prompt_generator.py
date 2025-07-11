@@ -16,9 +16,17 @@ def get_names_file() -> str:
     return os.path.join(get_prompts_dir(), "names.txt")
 
 
-def _load_name_pairs():
+def get_group_prompts_dir() -> str:
+    return os.path.join(get_prompts_dir(), "groups")
+
+
+def get_group_names_file() -> str:
+    return os.path.join(get_group_prompts_dir(), "names.txt")
+
+
+def _load_name_pairs(path: str):
     pairs = {}
-    names_file = get_names_file()
+    names_file = path
     if os.path.exists(names_file):
         with open(names_file, "r", encoding="utf-8") as f:
             for line in f:
@@ -32,7 +40,7 @@ def _load_name_pairs():
 
 
 async def update_names_file(client: Client, user_ids):
-    pairs = _load_name_pairs()
+    pairs = _load_name_pairs(get_names_file())
     for uid in user_ids:
         user = await client.get_users(int(uid))
         name = user.first_name or user.username or str(uid)
@@ -45,6 +53,22 @@ async def update_names_file(client: Client, user_ids):
         for uid, name in sorted(pairs.items()):
             f.write(f"{uid} - {name}\n")
     print(f"✅ Names saved to {names_file}")
+
+
+async def update_group_names_file(client: Client, group_ids):
+    pairs = _load_name_pairs(get_group_names_file())
+    for gid in group_ids:
+        chat = await client.get_chat(int(gid))
+        name = chat.title or str(gid)
+        pairs[int(gid)] = name
+
+    prompts_dir = get_group_prompts_dir()
+    names_file = get_group_names_file()
+    os.makedirs(prompts_dir, exist_ok=True)
+    with open(names_file, "w", encoding="utf-8") as f:
+        for gid, name in sorted(pairs.items()):
+            f.write(f"{gid} - {name}\n")
+    print(f"✅ Group names saved to {names_file}")
 
 
 async def generate_prompt(client: Client, user_id: int, api_type: str):
@@ -128,9 +152,21 @@ async def main():
         else:  # names
             prompts_dir = get_prompts_dir()
             os.makedirs(prompts_dir, exist_ok=True)
-            prompt_files = [f for f in os.listdir(prompts_dir) if f.endswith(".txt") and f != "names.txt"]
-            ids = [int(os.path.splitext(f)[0]) for f in prompt_files if os.path.splitext(f)[0].isdigit()]
-            await update_names_file(client, ids)
+            prompt_files = [
+                f
+                for f in os.listdir(prompts_dir)
+                if f.endswith(".txt") and f not in {"names.txt", "group_names.txt"}
+            ]
+            ids = [int(os.path.splitext(f)[0]) for f in prompt_files if os.path.splitext(f)[0].lstrip("-").isdigit()]
+            user_ids = [i for i in ids if i >= 0]
+
+            group_dir = get_group_prompts_dir()
+            os.makedirs(group_dir, exist_ok=True)
+            group_files = [f for f in os.listdir(group_dir) if f.endswith(".txt")]
+            group_ids = [int(os.path.splitext(f)[0]) for f in group_files if os.path.splitext(f)[0].lstrip("-").isdigit()]
+
+            await update_names_file(client, user_ids)
+            await update_group_names_file(client, group_ids)
 
 
 if __name__ == "__main__":
