@@ -162,17 +162,23 @@ async def handle_group_message(client: Client, message: Message):
         f"🤖 Got group message in {chat_id} from {message.from_user.first_name} ({message.from_user.id}): {text or 'Non-text message'}"
     )
 
+    topic_id = getattr(message, "reply_to_top_message_id", None)
+    if topic_id is None and message.reply_to_message:
+        topic_id = getattr(message.reply_to_message, "reply_to_top_message_id", None) or message.reply_to_message.id
+
+    chat_key = (chat_id, topic_id)
+
     delay = 0 if mentioned else int(os.getenv("GROUP_MESSAGE_WAIT_TIME", 60))
     async with waiting_lock:
-        if chat_id in waiting_groups:
-            waiting_groups[chat_id].append(message)
+        if chat_key in waiting_groups:
+            waiting_groups[chat_key].append(message)
             if mentioned:
-                group_reply_targets[chat_id] = message
+                group_reply_targets[chat_key] = message
                 await client.send_chat_action(chat_id, ChatAction.TYPING)
                 asyncio.create_task(
                     process_waiting_messages(
                         client,
-                        chat_id,
+                        chat_key,
                         waiting_groups,
                         waiting_lock,
                         ai_client,
@@ -181,13 +187,13 @@ async def handle_group_message(client: Client, message: Message):
                     )
                 )
             return
-        waiting_groups[chat_id] = [message]
-        group_reply_targets[chat_id] = message if mentioned else None
+        waiting_groups[chat_key] = [message]
+        group_reply_targets[chat_key] = message if mentioned else None
         await client.send_chat_action(chat_id, ChatAction.TYPING)
         asyncio.create_task(
             process_waiting_messages(
                 client,
-                chat_id,
+                chat_key,
                 waiting_groups,
                 waiting_lock,
                 ai_client,
