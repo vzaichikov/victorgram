@@ -155,7 +155,7 @@ async def handle_group_message(client: Client, message: Message):
     mentioned = False
     if bot_username and f"@{bot_username.lower()}" in text.lower():
         mentioned = True
-    if message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.id == client.me.id:
+    if message.mentioned or (message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.id == client.me.id):
         mentioned = True
 
     print(
