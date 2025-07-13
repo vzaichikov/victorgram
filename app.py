@@ -155,7 +155,7 @@ async def handle_group_message(client: Client, message: Message):
     mentioned = False
     if bot_username and f"@{bot_username.lower()}" in text.lower():
         mentioned = True
-    if message.mentioned or (message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.id == client.me.id):
+    if message.mentioned: #or (message.reply_to_message and message.reply_to_message.from_user and message.reply_to_message.from_user.id == client.me.id):
         mentioned = True
 
     print(
@@ -168,7 +168,8 @@ async def handle_group_message(client: Client, message: Message):
 
     chat_key = (chat_id, topic_id)
 
-    delay = 0 if mentioned else int(os.getenv("GROUP_MESSAGE_WAIT_TIME", 60))
+    delay = int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10)) if mentioned else int(os.getenv("GROUP_MESSAGE_WAIT_TIME", 60))
+    print(f"Delaying group message in {chat_id}:{topic_id} by {delay} seconds")
     async with waiting_lock:
         if chat_key in waiting_groups:
             waiting_groups[chat_key].append(message)
