@@ -5,6 +5,7 @@ import base64
 import random
 from io import BytesIO
 from pyrogram import Client
+from pyrogram import raw
 from pyrogram.types import Message
 from ai_client import AIClient
 from pyrogram.enums import ChatAction
@@ -208,24 +209,45 @@ async def send_typing_loop(client: Client, chat_id: int, stop_event: asyncio.Eve
             print(f"⛔ Typing notification error for {chat_id}: {e}")
         await asyncio.sleep(random.uniform(2, 3))
 
+async def send_message_in_topic(client: Client, chat_id: int, text: str, topic_id: int | None):
+    if not topic_id:
+        await client.send_message(chat_id, text)
+        return
+
+    try:
+        await client.invoke(
+            raw.functions.messages.SendMessage(
+                peer=await client.resolve_peer(chat_id),
+                message=text,
+                random_id=client.rnd_id(),
+                reply_to_msg_id=topic_id,
+                top_msg_id=topic_id,
+            )
+        )
+    except Exception as e:
+        print(f"⛔ Failed to send message in topic {chat_id}:{topic_id}: {e}")
+
+
 async def process_waiting_messages(
     client: Client,
-    chat_id: int,
+    chat_key,
     waiting_dict,
     waiting_lock,
     ai_client,
     delay: int | None = None,
     reply_targets: dict | None = None,
 ):
-    print(f"🤖 Processing waiting messages for {chat_id}")
+    chat_id = chat_key[0] if isinstance(chat_key, tuple) else chat_key
+    topic_id = chat_key[1] if isinstance(chat_key, tuple) else None
+    print(f"🤖 Processing waiting messages for {chat_id}:{topic_id}")
     if delay is None:
         delay = int(os.getenv("NEXT_MESSAGE_WAIT_TIME", 10))
     await asyncio.sleep(delay)
     async with waiting_lock:
-        msgs = waiting_dict.pop(chat_id, [])
+        msgs = waiting_dict.pop(chat_key, [])
         reply_to = None
         if reply_targets is not None:
-            reply_to = reply_targets.pop(chat_id, None)
+            reply_to = reply_targets.pop(chat_key, None)
     if not msgs:
         return
     if chat_id < 0:
@@ -237,12 +259,16 @@ async def process_waiting_messages(
             or str(chat_id)
         )
     system_prompt = enhance_system_prompt(get_system_prompt(chat_id, user_name))
-    print(f"🤖 Processing {len(msgs)} messages from {chat_id}")
+    print(f"🤖 Processing {len(msgs)} messages from {chat_id}:{topic_id}")
     try:
         history = []
         limit = int(os.getenv("HISTORY_LIMIT")) + len(msgs)
-        async for m in client.get_chat_history(chat_id, limit=limit):
-            history.append(m)
+        if topic_id:
+            async for m in client.get_discussion_replies(chat_id, topic_id, limit=limit):
+                history.append(m)
+        else:
+            async for m in client.get_chat_history(chat_id, limit=limit):
+                history.append(m)
 
         for m in reversed(msgs):
             if history and history[0].id == m.id:
@@ -262,7 +288,7 @@ async def process_waiting_messages(
         if reply_to is not None:
             await reply_to.reply_text(reply)
         else:
-            await client.send_message(chat_id, reply)
+            await send_message_in_topic(client, chat_id, reply, topic_id)
     except ValueError as e:
         print(f"⛔ Error for chat {chat_id}: {e}")
     except KeyError as e:
