@@ -162,9 +162,17 @@ async def handle_group_message(client: Client, message: Message):
         f"🤖 Got group message in {chat_id} from {message.from_user.first_name} ({message.from_user.id}): {text or 'Non-text message'}"
     )
 
-    topic_id = getattr(message, "reply_to_top_message_id", None)
-    if topic_id is None and message.reply_to_message:
-        topic_id = getattr(message.reply_to_message, "reply_to_top_message_id", None)
+    def get_topic_id(msg: Message) -> int | None:
+        topic = getattr(msg, "reply_to_top_message_id", None)
+        if not topic:
+            topic = getattr(msg, "message_thread_id", None)
+        if not topic and msg.reply_to_message:
+            topic = getattr(msg.reply_to_message, "reply_to_top_message_id", None)
+            if not topic:
+                topic = getattr(msg.reply_to_message, "message_thread_id", None)
+        return topic
+
+    topic_id = get_topic_id(message)
 
     chat_key = (chat_id, topic_id)
 
